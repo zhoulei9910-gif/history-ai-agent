@@ -26,3 +26,6 @@ __pycache__/
 
 # 本地生成的会话与缓存（保留在磁盘，不上传）
 /data/cache/
+
+# 会话目录只在本地使用
+/data/session/

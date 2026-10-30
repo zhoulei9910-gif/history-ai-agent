@@ -258,7 +258,8 @@ def main():
         def check_previous():
             regression = directory / 'regression-project'
             regression.mkdir()
-            names = ('conversation.py', 'session_store.py', 'model_demo_ask_turn.py', 'config.py',
+            names = ('conversation.py', 'session_store.py', 'model_demo_ask_turn.py',
+                     'IncompleteStreamError.py', 'config.py',
                      'check_display.py', 'check_s2_03.py', 'check_s3_01.py', 'check_s3_02.py',
                      'check_s3_03.py', 'check_s3_04.py')
             for name in names:

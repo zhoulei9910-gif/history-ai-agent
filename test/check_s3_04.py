@@ -265,7 +265,7 @@ with patch.dict(os.environ, {}, clear=True), patch.dict(sys.modules, {"dotenv": 
             regression = directory / 'regression-project'
             regression.mkdir()
             names = ('conversation.py', 'session_store.py', 'model_demo_ask_turn.py',
-                     'config.py', 'check_display.py', 'check_s2_03.py',
+                     'IncompleteStreamError.py', 'config.py', 'check_display.py', 'check_s2_03.py',
                      'check_s3_01.py', 'check_s3_02.py', 'check_s3_03.py')
             for name in names:
                 relative = Path('test') / name if name.startswith('check_') else Path(name)
