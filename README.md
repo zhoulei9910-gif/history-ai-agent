@@ -87,19 +87,21 @@ E12/E13 真实追问结果尚未提供，是否已运行不推断；已有输出
 
 STAGE3_REVIEW.md保留四场景、真实验证状态和导师示范说明；阶段3程序线收尾，不据此宣称真实模型质量已验收或学习者已独立掌握评估。
 
-## 当前 S4-01：阶段4独立入口与结构化回答契约
+## S4-01：离线结构化回答契约验收通过
 
-阶段4使用stage4_structured.py；model_demo_ask_turn.py保留为阶段3学习快照。当前只需实现新入口中的make_mock_answer(answer, uncertainty)，返回约定的五字段dict；main已提供JSON打印。字段与输入规则见LEARNING_PLAN.md文末。
+2026-11-02：学员已实现make_mock_answer，入口833265d1实际通过test/check_s4_01.py **8/8、退出码0**，含阶段3及此前回归。两个参数先检查类型再清理空白，固定字段、原文保留、来源状态和独立列表均符合契约。dict与JSON字符串的解释方向正确；学员误称dict可append，导师已纠正append属于list，dict用键赋值或update修改。此处仍待后续迁移巩固，不据一次通过标全面掌握。未读取Key、未请求模型，无新增真实用量或费用。
+
+## 当前 S4-02：解析并校验JSON回答
+
+继续在stage4_structured.py增加parse_answer_json(raw)，保留已验收的构造函数和main。先json.loads，再检查顶层对象、五字段、文本类型和来源状态，最后返回规范化dict；不得用默认值或覆盖字段把非法来源改成合法结果。详细契约见学习计划文末。
 
 ```bash
-.venv/bin/python test/check_s4_01.py
-# 完成函数后直接运行离线示例
-.venv/bin/python stage4_structured.py
+.venv/bin/python test/check_s4_02.py
+# 完成解析函数后查看离线演示
+.venv/bin/python test/check_s4_02.py --demo
 ```
 
-当前脚手架基线 **1/8、退出码1**：旧S3-09及此前回归通过，新构造函数待学员实现。目标8/8、退出码0；当前直接运行入口会因NotImplementedError停止，这是待完成任务的预期状态。
-
-本课只用标准库json与模拟文本，mode固定mock、source_status固定not_retrieved、sources为空；不加载配置、Key或请求模型。后续小课继续在阶段4入口扩展，需要模型能力时再复制旧调用，不提前实现工具或Agent。
+当前占位基线 **1/10、退出码1**，仅S4-01及此前回归通过；目标10/10、退出码0。旧main仍可运行并输出S4-01示例，新解析功能由学员实现，不改阶段3入口。所有检查与演示离线，不加载配置或请求模型。
 
 ## 每课验收后的 GitHub 同步
 
