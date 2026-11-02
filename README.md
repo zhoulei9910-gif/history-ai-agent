@@ -91,17 +91,21 @@ STAGE3_REVIEW.md保留四场景、真实验证状态和导师示范说明；阶�
 
 2026-11-02：学员已实现make_mock_answer，入口833265d1实际通过test/check_s4_01.py **8/8、退出码0**，含阶段3及此前回归。两个参数先检查类型再清理空白，固定字段、原文保留、来源状态和独立列表均符合契约。dict与JSON字符串的解释方向正确；学员误称dict可append，导师已纠正append属于list，dict用键赋值或update修改。此处仍待后续迁移巩固，不据一次通过标全面掌握。未读取Key、未请求模型，无新增真实用量或费用。
 
-## 当前 S4-02：解析并校验JSON回答
+## S4-02：JSON解析与校验离线验收通过
 
-继续在stage4_structured.py增加parse_answer_json(raw)，保留已验收的构造函数和main。先json.loads，再检查顶层对象、五字段、文本类型和来源状态，最后返回规范化dict；不得用默认值或覆盖字段把非法来源改成合法结果。详细契约见学习计划文末。
+2026-11-02：学员实现parse_answer_json，入口a4dabb6e实际通过test/check_s4_02.py **10/10、退出码0**，--demo成功，含此前回归。仅验证离线解析与回答契约；输入str、解析后对象类型与业务格式的区别仍待巩固，详见PROGRESS.md。未请求模型。
+
+## 当前 S4-03A：构造Kimi JSON请求
+
+只实现stage4_structured.py的build_structured_request(question)，返回包含model、messages、response_format、stream、max_completion_tokens和reasoning_effort的内存dict。JSON Mode请求使用json_object；详细字段与提示词要求见学习计划文末。保留旧解析／构造函数和main，不导入SDK或配置。
 
 ```bash
-.venv/bin/python test/check_s4_02.py
-# 完成解析函数后查看离线演示
-.venv/bin/python test/check_s4_02.py --demo
+.venv/bin/python test/check_s4_03a.py
+# 实现后查看离线请求参数，未发送给模型
+.venv/bin/python test/check_s4_03a.py --demo
 ```
 
-当前占位基线 **1/10、退出码1**，仅S4-01及此前回归通过；目标10/10、退出码0。旧main仍可运行并输出S4-01示例，新解析功能由学员实现，不改阶段3入口。所有检查与演示离线，不加载配置或请求模型。
+占位基线 **1/10、退出码1**，旧S4-02的10项及此前回归通过；目标10/10、退出码0。提示词内容另由导师人工审阅。原S4-03拆为A请求构造、B调用与响应校验，本课不执行真实请求；mode=model描述未来模型输出，当前mock-only解析器的扩展留到B。
 
 ## 每课验收后的 GitHub 同步
 
