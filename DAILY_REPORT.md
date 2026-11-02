@@ -526,3 +526,72 @@ Mock把返回内容固定下来，便于确定程序怎样传参、提交历史�
 - **一条建议：** 沿用已布置的S4-01，先口述dict与JSON字符串分别由谁使用，再独立完成原任务并按既定方式提交；本次不新增任务或推进课次。
 - **待验证：** S4-01实现、JSON输出及个人解释；S3-09学员独立评估能力；E12/E13已有真实结果和实际费用。旧验收与导师讲解不自动转为学员掌握。
 - 本次仅更新本日报并保留所有历史日期；未运行检查、业务脚本或模型请求，未读取.env／真实Key／请求头或会话内容，未修改其他项目文件、Git索引或触发上传。
+
+## 2026-11-02
+
+复盘范围：北京时间00:00～21:59:47，以本次心跳触发时刻为截止。依据当天完成声明、导师实际检查输出及有日期的验收记录；本次只读整理，没有重新运行检查或模型请求。
+
+### 当天目标、实际完成与验证证据
+
+今天围绕结构化回答完成“构造对象→解析与校验→构造模型请求”三个小任务；随后布置调用接线。
+
+| 事项 | 学员实际完成／导师工作 | 验证证据与边界 |
+| --- | --- | --- |
+| S4-01 离线回答契约 | 学员实现make_mock_answer，校验参数并返回五字段字典 | 当天验收版本833265d1，test/check_s4_01.py **8/8、退出码0**，含此前回归；不是模型回答质量成绩 |
+| S4-02 JSON解析与业务校验 | 学员实现parse_answer_json，区分语法、顶层类型、字段和来源错误 | 验收版本a4dabb6e，test/check_s4_02.py **10/10、退出码0**，--demo成功；main额外解析但未使用返回值，当前仅作校验 |
+| S4-03A JSON请求构造 | 学员实现build_structured_request；导师人工审阅system提示词 | 验收版本0cfd746f，test/check_s4_03a.py **10/10、退出码0**，离线演示成功；五字段、中文、不确定性与未检索声明通过审阅，未发送真实请求 |
+| S4-03B 调用接线 | 导师讲解并布置客户端注入、显式expected_mode及响应检查，提供占位和检查 | 布置时版本a37ae62b，基线 **1/12、退出码1**，只有旧回归通过；临时正确实现12/12仅用于验证检查器，不是学员完成 |
+
+证据：[进度与理解观察](/Users/leon/workspace/PythonProject/history-ai-agent/PROGRESS.md)、[评估范围](/Users/leon/workspace/PythonProject/history-ai-agent/EVAL_CASES.md)、[当前任务契约](/Users/leon/workspace/PythonProject/history-ai-agent/LEARNING_PLAN.md)。当天课程提交为[bc16c28](https://github.com/zhoulei9910-gif/history-ai-agent/commit/bc16c28575199e782a6ab538c14b70c5d602bfdc)、[c4589cb](https://github.com/zhoulei9910-gif/history-ai-agent/commit/c4589cbc666281f110a1460190a58f0b6e8ed8f4)、[1d7e0fc](https://github.com/zhoulei9910-gif/history-ai-agent/commit/1d7e0fc341f229fb2878737cebf6db3738a476f1)，分别在12:02、19:59、21:21；用于定位课程快照，不能单凭提交时间证明学员理解。
+
+**版本边界：** 上述得分对应各次验收版本。当前工作区已有未提交的S4-03B改动，不能沿用旧10/10宣称当前程序仍通过；本次不运行检查、不改进度，也不验收B。当前差异不能单独证明这些编辑发生在今天。
+
+**真实调用：** 今天课程记录中的导师真实模型请求为0；学员未提交新的真实回答、usage或费用证据，不能据此推断其全天个人调用总量。地理历史事实、结构化模型效果和实际成本均无新增真实验证；旧E12/E13结果继续待补。
+
+### 易错点：现象、原因、正确理解和避免方式
+
+以下三项均为当天独立表述的**单次记录／待巩固**；没有同一错误至少两次独立发生的充分证据，不标“反复出错”。导师已解释，不等同于学员已掌握。
+
+| 现象 | 原因与正确理解 | 避免方式 |
+| --- | --- | --- |
+| S4-01解释dict“可以.append” | 混淆容器的方法；dict通过键赋值或update修改，append属于list，例如sources列表 | 先确认变量实际类型，再选择操作；把外层回答字典和内部sources列表分开描述 |
+| S4-02用“输入是JSON字符串、loads兼容性更高”解释拒绝数组 | 混淆输入类型、解析结果和业务契约；字符串"[]"可解析成list，但本项目回答要求dict | 分三步口述：raw是什么类型、loads得到什么、业务是否接受；不要用可解析代替可用 |
+| S4-03A解释messages“是prompt，字典更合适” | 说明了用途，未说清接口结构；本课约定messages为list[dict]，SDK处理请求序列化，提前dumps会变str | 分别标出请求dict、消息list、每条消息dict和content字符串；按接口组装参数 |
+
+**当前未验收代码快照，仅作待验证提醒：** 只读发现expected_mode尚缺默认值及仅关键字限制；“不等于mock或不等于model”的条件恒真；仍保留固定mock校验和返回；调用端先取choices[0]再检查，并要求choice为dict，还在传给解析器前strip正文。这些是当前静态观察，不记作今天已确认的新失败次数，不给出虚构检查得分。SDK响应对象与传入请求字典也应区分，类似Kotlin响应DTO与Map不同。[解析器快照](/Users/leon/workspace/PythonProject/history-ai-agent/stage4_structured.py:32)、[调用端快照](/Users/leon/workspace/PythonProject/history-ai-agent/stage4_structured.py:148)、[官方SDK响应访问示例](https://developers.openai.com/api/reference/python/resources/chat/subresources/completions/methods/create)
+
+### 关键知识点（5项）
+
+1. **内存对象与文本分层：** dict/list可继续操作，dumps产生JSON字符串，loads做反向转换。类似Kotlin对象／Map与序列化String；Python容器的具体类型仍需运行时确认。[Python JSON](https://docs.python.org/3.11/library/json.html)、[容器方法](https://docs.python.org/3.11/tutorial/datastructures.html)
+2. **语法正确与业务有效分层：** 合法JSON可表示数组或null；本项目还检查顶层dict、五字段、文本类型及来源状态。JSONDecodeError是ValueError的子类；本课保留语法错误的具体类型，结构不合约定用普通ValueError。[官方反序列化与异常](https://docs.python.org/3.11/library/json.html#json.loads)
+3. **请求嵌套容器与隔离：** messages保留消息集合，response_format保留字典；SDK参数不是预先拼好的JSON正文。每次新建嵌套可变对象，避免修改旧请求影响新请求，类似Kotlin只复制外层集合仍可能共享元素。[本课检查范围](/Users/leon/workspace/PythonProject/history-ai-agent/test/check_s4_03a.py)、[官方SDK消息参数](https://developers.openai.com/api/reference/python/resources/chat/subresources/completions/methods/create)
+4. **JSON Mode不替代证据：** Kimi通过json_object约束输出格式，提示词说明字段；仍需检查响应状态和业务数据，来源与史实需另行核验。官方也提示JSON可能因输出截断而不完整，本课不能把配置存在当成真实验证。[Kimi JSON Mode](https://platform.kimi.com/docs/guide/use-json-mode-feature-of-kimi-api)
+5. **显式预期与客户端注入（已讲解，待实现验证）：** expected_mode由调用方选择，不能由模型自报决定；默认mock保留旧入口。注入client类似传入Retrofit service；Python本课按对象的方法调用，无须先建接口类。`**request`展开命名实参，`*`后的参数只按名称传入；这些是B的要求，不是今日已验收能力。[S4-03B契约](/Users/leon/workspace/PythonProject/history-ai-agent/LEARNING_PLAN.md)
+
+### 面试题与参考答案（5道）
+
+**Q1：请求是JSON协议，为什么messages不先转成JSON字符串？**
+
+SDK接收结构化消息集合并负责请求编码。本项目传list[dict]；提前dumps会把列表变为str，属于参数结构变化，而非“更标准的JSON”。可类比给Retrofit传请求DTO，再由转换器编码。此处说的是SDK参数；直接使用底层HTTP构造正文时，序列化边界由相应调用层负责。[官方SDK参数](https://developers.openai.com/api/reference/python/resources/chat/subresources/completions/methods/create)
+
+**Q2：json.loads("[]")成功，为何回答解析器仍应拒绝？**
+
+语法层能把它还原成列表，但回答契约要求字典及五个约定字段。S4-02因此在loads之后检查顶层和字段；JSONDecodeError表示解析失败，普通ValueError表示本课业务格式不合格。两层通过仍不证明回答内容真实。[Python官方转换规则](https://docs.python.org/3.11/library/json.html#json.JSONDecoder)
+
+**Q3：启用JSON Mode且finish_reason为stop，就能直接展示为已核实回答吗？**
+
+不能。应用仍需检查响应条目、正文和业务字段；stop也不证明史实正确。本项目尚未接检索，来源状态应为not_retrieved、sources为空；模型写出来源名称不能替代实际检索证据。JSON Mode还有截断边界，不能假定每次都能解析。[Kimi官方说明](https://platform.kimi.com/docs/guide/use-json-mode-feature-of-kimi-api)
+
+**Q4：为什么预期模式由程序指定，而不是读取模型的mode后自动采用？**
+
+预期来自实际执行路径：离线构造和模型调用需要不同的接受条件。若用待验证数据自己决定规则，就失去了识别模式不匹配的作用。B要求调用方显式传model，旧调用默认mock；校验匹配后保留原值，不能覆盖错误字段“修成合法”。这只是本项目校验契约，不代表一个mode字段能证明内容来源。
+
+**Q5：三个课次检查通过，为何还不能说结构化模型应用全部完成？**
+
+今天通过的是对象构造、离线解析及请求参数，B仅已布置；假响应与检查器控制实现不等于真实模型返回。验收还应对应代码快照，当前修改不能继承旧成绩。后续真实评估需另留回答、人工判定、usage和结束原因；本课调用端尚未保留usage，实际费用未知，不能用假数据或缺统计推断免费。[评估记录](/Users/leon/workspace/PythonProject/history-ai-agent/EVAL_CASES.md)
+
+### 下一次复习建议与未解决事项
+
+- **一条建议：** 沿用已布置的S4-03B，先用自己的话画出“请求dict→SDK响应对象→content字符串→已校验dict”的类型流，再对照现有代码核对每一步；尤其给mock/model各写一行条件真假表。此处是复习原任务，不新增课程或要求付费调用。
+- **待解决：** S4-03B模式参数兼容、允许值判断、响应检查顺序及原正文透传尚待正式提交与验收；expected_mode的理解问答未收到回答。dict/list与字符串的层次理解继续巩固，真实结构化输出、用量记录、E12/E13及个人评估能力仍待验证。
+- 本次仅更新DAILY_REPORT.md当天段落并保留历史；官方接口资料已核对。未运行检查／业务脚本／模型请求，未读取.env、真实Key、请求头或会话内容，未修改其他项目文件或Git索引，也未执行课程上传。

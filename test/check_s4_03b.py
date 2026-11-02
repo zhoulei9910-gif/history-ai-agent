@@ -156,7 +156,8 @@ def main():
     def envelopes():
         choice = response().choices[0]
         for result in (SimpleNamespace(), SimpleNamespace(choices=None),
-                       SimpleNamespace(choices=()), SimpleNamespace(choices=[]),
+                       SimpleNamespace(choices=()), SimpleNamespace(choices=(choice,)),
+                       SimpleNamespace(choices=[]),
                        SimpleNamespace(choices=[choice, choice]), SimpleNamespace(choices=[None]),
                        SimpleNamespace(choices=[SimpleNamespace()]),
                        SimpleNamespace(choices=[SimpleNamespace(finish_reason='stop')]),

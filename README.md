@@ -99,17 +99,21 @@ STAGE3_REVIEW.md保留四场景、真实验证状态和导师示范说明；阶�
 
 2026-11-02：学员实现build_structured_request，入口0cfd746f实际通过test/check_s4_03a.py **10/10、退出码0**；--demo成功。提示词人工审阅通过：JSON对象／五字段、中文、不确定性、虚构前提及未检索来源声明齐全。仅离线请求构造验收，不证明供应商实际返回、模型质量或史实。
 
-## 当前 S4-03B：结构化问答调用接线
+## S4-03B：结构化问答离线验收通过
 
-在stage4_structured.py为parse_answer_json增加显式expected_mode参数，保留默认mock兼容；实现ask_structured(client, question)，一次请求→结束状态和正文检查→以model模式解析→返回dict。客户端由外部传入，详细契约见学习计划文末。
+2026-11-02：学员将choices类型收窄为list（保留长度检查），入口ec31245b实际通过补强后的test/check_s4_03b.py **12/12、退出码0**，--demo成功。单项tuple拒绝、显式模式、响应检查、异常传播及旧回归均离线通过，S4-03B功能验收完成。此前87aebdc0的11/12保留为修正过程，不当作当前得分；未请求真实模型，不证明模型质量或史实。
+
+## 当前 S4-03C：失败响应也保留元数据
+
+在stage4_structured.py实现extract_response_metadata四字段提取，并为ask_structured增加可选on_metadata回调；响应返回后、答案校验前交出元数据，旧返回值保持。详细缺失／零值／异常契约见学习计划。
 
 ```bash
-.venv/bin/python test/check_s4_03b.py
-# 完成后查看假客户端的离线问答演示
-.venv/bin/python test/check_s4_03b.py --demo
+.venv/bin/python test/check_s4_03c.py
+# 实现后查看正常与JSON失败的假客户端演示
+.venv/bin/python test/check_s4_03c.py --demo
 ```
 
-当前占位基线 **1/12、退出码1**，旧S4-03A及全链回归通过；目标12/12。检查与演示不读取Key或调用真实模型；原main仍输出模拟回答。真实验证和用量记录留到后续小课，本课尚未保留usage。
+占位基线 **1/12、退出码1**，旧补强B及全链回归通过；目标12/12。仅离线假数据，不读Key或调用模型，不把假用量当费用。原main仍输出模拟答案；真实接线与人工评估留S4-03D另行布置。
 
 ## 每课验收后的 GitHub 同步
 

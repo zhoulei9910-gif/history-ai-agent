@@ -29,52 +29,61 @@ def make_mock_answer(answer: str, uncertainty: str) -> dict:
     }
 
 
-def parse_answer_json(raw: str) -> dict:
-    """S4-02：解析JSON并校验回答契约，返回规范化dict。
+def parse_answer_json(raw: str, *, expected_mode: str = "mock") -> dict:
+    """解析JSON并校验回答契约，返回规范化dict。
 
-    语法错误保留JSONDecodeError；业务结构错误（缺字段、类型错、
-    空白、伪造来源等）统一抛ValueError。只在原始值上校验，不覆盖洗白。
+    expected_mode 为仅关键字参数，默认 mock 保持旧调用兼容；
+    校验时要求原始 mode 与 expected_mode 完全一致，不覆盖洗白。
+    语法错误保留 JSONDecodeError，业务结构错误统一抛 ValueError。
     """
-    # 1) raw 必须是 str，其余类型一律 TypeError
+    # 1) raw 必须是 str
     if not isinstance(raw, str):
         raise TypeError("raw 必须是 str")
 
-    # 2) 解析 JSON：语法错误保留 json.JSONDecodeError，不捕获
+    # 2) expected_mode 先验类型，再验取值（不 strip、精确匹配）
+    if not isinstance(expected_mode, str):
+        raise TypeError("expected_mode 必须是 str")
+    if expected_mode not in ("mock", "model"):
+        raise ValueError("expected_mode 只能是 mock 或 model")
+
+    # 3) 解析 JSON：语法错误保留 json.JSONDecodeError，不捕获
     data = json.loads(raw)
 
-    # 3) 顶层必须是对象（dict）
+    # 4) 顶层必须是对象（dict）
     if not isinstance(data, dict):
         raise ValueError("顶层必须是 JSON 对象")
 
-    # 4) 恰好五个字段，缺字段或多余字段都拒绝
+    # 5) 恰好五个字段，缺字段或多余字段都拒绝
     if set(data.keys()) != {"mode", "answer", "uncertainty", "source_status", "sources"}:
         raise ValueError("字段必须恰好为 mode/answer/uncertainty/source_status/sources")
 
-    # 5) 四个文本字段都必须是 str
+    # 6) 四个文本字段都必须是 str
     for key in ("mode", "answer", "uncertainty", "source_status"):
         if not isinstance(data[key], str):
             raise ValueError(f"{key} 必须是 str")
 
-    # 6) answer / uncertainty 清理首尾空白后必须非空
+    # 7) answer / uncertainty 清理首尾空白后必须非空
     answer = data["answer"].strip()
     uncertainty = data["uncertainty"].strip()
     if not answer or not uncertainty:
         raise ValueError("answer 和 uncertainty 不能为空")
 
-    # 7) sources 先验 list 类型，再验必须为空（不能 `not sources` 判断）
+    # 8) sources 先验 list 类型，再验必须为空（不能 `not sources` 判断）
     sources = data["sources"]
     if not isinstance(sources, list):
         raise ValueError("sources 必须是 list")
     if sources:
         raise ValueError("sources 必须为空列表")
 
-    # 8) mode / source_status 精确匹配，不 strip、不洗白
-    if data["mode"] != "mock" or data["source_status"] != "not_retrieved":
-        raise ValueError("mode 必须为 mock，source_status 必须为 not_retrieved")
+    # 9) mode 必须与 expected_mode 精确一致，source_status 固定 not_retrieved
+    if data["mode"] != expected_mode:
+        raise ValueError(f"mode 必须为 {expected_mode}")
+    if data["source_status"] != "not_retrieved":
+        raise ValueError("source_status 必须为 not_retrieved")
 
-    # 9) 返回规范化后的新 dict：answer/uncertainty 已 strip，sources 是新空列表
+    # 10) 返回规范化后的新 dict（保留原始 mode，不硬编码）
     return {
-        "mode": "mock",
+        "mode": data["mode"],
         "answer": answer,
         "uncertainty": uncertainty,
         "source_status": "not_retrieved",
@@ -135,13 +144,48 @@ def build_structured_request(question: str) -> dict:
 
 
 
-def ask_structured(client, question: str) -> dict:
-    """S4-03B：使用传入客户端请求一次，校验响应后返回回答dict。
+def extract_response_metadata(response) -> dict:
+    """S4-03C：只读提取结束原因及用量；缺失为None，零值保留。
 
-    配合parse_answer_json的显式expected_mode扩展；具体规则见学习计划。
-    本课用假客户端离线检查，不在此创建客户端、打印或处理重试。
+    四字段、缺失与回调接线规则见LEARNING_PLAN.md；不判断回答成功。
+    本函数由学员实现，不请求模型或计算费用。
     """
-    raise NotImplementedError("请完成S4-03B的ask_structured及解析器模式扩展")
+    raise NotImplementedError("请完成S4-03C元数据提取与on_metadata回调接线")
+
+
+def ask_structured(client, question: str) -> dict:
+    """使用传入客户端请求一次，校验响应包络后返回已校验的回答dict。
+
+    本课用假客户端离线检查，不在此创建客户端、打印或处理重试；
+    SDK 异常原样向上传播，不自行关闭由调用方提供的客户端。
+    """
+    # 1) 构造请求（内部完成 question 的类型/空白校验）
+    request = build_structured_request(question)
+
+    # 2) 请求一次：SDK 异常原样向上传播，不捕获、不重试
+    response = client.chat.completions.create(**request)
+
+    # 3) 校验响应包络，逐层用 getattr，缺失或结构错误统一 ValueError
+    choices = getattr(response, "choices", None)
+    if not isinstance(choices, (list)) or len(choices) != 1:
+        raise ValueError("响应 choices 必须恰好一个")
+    choice = choices[0]
+    if choice is None:
+        raise ValueError("choice 不能为空")
+
+    finish_reason = getattr(choice, "finish_reason", None)
+    if finish_reason != "stop":
+        raise ValueError("finish_reason 必须为 stop")
+
+    message = getattr(choice, "message", None)
+    if message is None:
+        raise ValueError("message 不能为空")
+    content = getattr(message, "content", None)
+    if not isinstance(content, str) or not content.strip():
+        raise ValueError("content 必须是非空白字符串")
+
+    # 4) 交给解析器，显式期望 model 模式
+    return parse_answer_json(content, expected_mode="model")
 
 
 def main() -> None:
