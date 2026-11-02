@@ -1,7 +1,7 @@
 # 地理历史 Agent 学习路线
 
 每次一个主要目标、一个 30～60 分钟小任务；学习者实现，导师按代码和运行证据验收。
-S1-01、S1-02 已通过；S2-01～S2-03 程序验收及当前提示词人工审阅通过。已有两次带提示的真实结果；学员自评、短提示词真实效果仍待验证，不标记整个阶段完成。S3-01 离线历史管理 9/9；S3-02 多轮调用离线 12/12 验收通过，真实追问结果待提供；S3-03 请求历史裁剪离线 12/12 通过；S3-04 存储及旧回归 12/12 通过；S3-05 CLI 保存恢复及状态提示离线 12/12 通过；S3-06 导师示范程序及学员当前概念小问通过；S3-07A SDK 流式调用离线 12/12 通过；S3-07B最新保存版本离线12/12通过；S3-08中断与提交边界离线12/12通过；S3-09由导师按请求完成示范报告并离线3/3通过；S4-01学员实现离线8/8通过；S4-02学员实现离线10/10通过；当前S4-03A在同一阶段4入口构造JSON Mode请求，基线1/10。
+S1-01、S1-02 已通过；S2-01～S2-03 程序验收及当前提示词人工审阅通过。已有两次带提示的真实结果；学员自评、短提示词真实效果仍待验证，不标记整个阶段完成。S3-01 离线历史管理 9/9；S3-02 多轮调用离线 12/12 验收通过，真实追问结果待提供；S3-03 请求历史裁剪离线 12/12 通过；S3-04 存储及旧回归 12/12 通过；S3-05 CLI 保存恢复及状态提示离线 12/12 通过；S3-06 导师示范程序及学员当前概念小问通过；S3-07A SDK 流式调用离线 12/12 通过；S3-07B最新保存版本离线12/12通过；S3-08中断与提交边界离线12/12通过；S3-09由导师按请求完成示范报告并离线3/3通过；S4-01学员实现离线8/8通过；S4-02学员实现离线10/10通过；S4-03A学员实现请求构造离线10/10通过；当前S4-03B注入调用与model模式解析，基线1/12。
 
 ## 每课验收后同步 GitHub（2026-10-30补充）
 
@@ -57,7 +57,7 @@ S1-01、S1-02 已通过；S2-01～S2-03 程序验收及当前提示词人工审�
 | --- | --- | --- |
 | S4-01 | 定义结构化回答契约（离线已验收） | 确定答案、不确定性、来源状态等字段及合法示例。 |
 | S4-02 | 解析并校验结构化结果（离线已验收） | 缺字段、错误类型和非法 JSON 能被明确拒绝。 |
-| S4-03 | 接入模型结构化输出（A当前／B后续） | A构造JSON请求；B调用并校验响应，再单列少量真实评估。 |
+| S4-03 | 接入模型结构化输出（A已验收／B当前） | A请求构造；B注入调用与响应校验；C先补用量记录再做少量真实评估。 |
 | S4-04 | 实现一个确定性工具 | 本地地名条目查询可独立运行，练习资料明确标注来源或模拟状态。 |
 | S4-05 | 读取模型提出的工具请求 | 识别工具名称与参数，理解它尚未被程序执行。 |
 | S4-06 | 执行工具并回填结果 | 程序完成一次受控调用，模型根据工具结果继续回答。 |
@@ -113,7 +113,7 @@ S1-01、S1-02 已通过；S2-01～S2-03 程序验收及当前提示词人工审�
 - 每课补充正常、异常和边界样例；涉及真实模型输出的质量、事实来源、时延与实际用量单独评估。旧输出不证明新版本效果，模拟用量不作为费用。
 - 模型、SDK、结构化输出及流式协议在对应课开始时核对当前官方文档，不在路线中锁定未知接口或版本。需要真实付费调用时，先说明用途和规模。
 - 框架在解决明确问题时引入，同类框架只选一个；不安排模型训练或复杂基础设施。Python 知识继续按需穿插，用 Java/Kotlin 类比并说明差异。
-- 路线展开本身不新增验收结论；当前实际任务及验证结果见文末S4-03A。
+- 路线展开本身不新增验收结论；当前实际任务及验证结果见文末S4-03B。
 
 
 
@@ -530,7 +530,7 @@ def main(session_path: Path | None = None, *, stream: bool = False) -> None:
 
 2026-11-02：学员实现入口a4dabb6e实际通过test/check_s4_02.py **10/10、退出码0**，--demo成功，S4-02离线功能验收通过。拒绝合法数组的原因是业务要求dict，而非输入不是JSON字符串；导师已解释，理解待后续迁移检验。不据此标模型质量或史实通过。
 
-## 当前 S4-03A：构造Kimi JSON Mode请求（待实现）
+## S4-03A：构造Kimi JSON Mode请求（保留布置基线，现已离线验收）
 
 按实际理解情况将原S4-03拆为A请求构造、B调用与响应校验；后续B再衔接少量人工真实评估。本次只有一个30～45分钟目标：在stage4_structured.py实现纯函数build_structured_request(question: str) -> dict，形成可查看、可测试的请求参数，不发送请求。旧make_mock_answer、parse_answer_json和main保持当前实现，阶段3入口／旧检查／依赖不变。
 
@@ -558,3 +558,33 @@ user.content仅是question.strip()，内部换行／引号保留，不把用户�
 完成后提交检查及--demo输出，并解释“messages为什么保留list[dict]，而不是先json.dumps成字符串？”导师同时人工审阅system提示词。通过后同轮布置S4-03B、更新记录并上传GitHub；不提前实现调用端或执行付费请求。本课真实调用计划0次，暂无新增费用；B中的真实验证另说明用途／规模。
 
 2026-11-02核对官方：[Kimi JSON Mode](https://platform.kimi.com/docs/guide/use-json-mode-feature-of-kimi-api)、[Kimi K3参数](https://platform.kimi.com/docs/guide/kimi-k3-quickstart)。JSON Mode文档当前示例使用其他模型，本工程保留kimi-k3；输出预算按K3当前max_completion_tokens说明，不照搬通用页旧max_tokens示例。不引入严格JSON Schema或新SDK版本。
+
+
+2026-11-02：学员实现build_structured_request，入口0cfd746f实际通过test/check_s4_03a.py **10/10、退出码0**；--demo成功。提示词人工审阅通过：JSON对象／五字段、中文、不确定性、虚构前提及未检索来源声明齐全。仅离线请求构造验收，不证明供应商实际返回、模型质量或史实。
+
+## 当前 S4-03B：用注入客户端接通结构化问答（待实现）
+
+一个30～60分钟目标：把已验收的请求构造与回答解析串起来，用假客户端验证调用边界。本课不创建真实客户端、加载配置或发送付费请求；阶段4继续使用stage4_structured.py。仅修改解析器的模式参数并实现ask_structured，其余函数和main保持当前实现。
+
+最多三个按需概念：①客户端注入，类似将Retrofit service传入业务层，Python本课按对象提供的方法调用，无须新建接口／继承层次；②`**request`将字典展开为命名实参，不是JSON序列化；③`*`后的参数只能按名称传递，用显式expected_mode避免由模型自报模式决定校验规则。
+
+动手一：将签名扩展为`parse_answer_json(raw: str, *, expected_mode: str = "mock") -> dict`。先检查expected_mode为str，否则TypeError；仅允许mock/model，其他值ValueError。默认mock保留旧契约。原始data["mode"]必须精确等于调用方传入的expected_mode，交叉模式拒绝；返回mode保留已验证值，不能继续写死mock，也不能覆盖错误模式。原raw类型、JSON语法／字段／来源校验、清理和对象隔离全部保持。
+
+动手二：实现占位`ask_structured(client, question: str) -> dict`，流程如下：
+
+1. 调用build_structured_request(question)一次；问题校验失败时零SDK调用。
+2. 用`client.chat.completions.create(**request)`调用一次，沿用六个请求参数，不加载配置或创建客户端。
+3. 校验响应包络：choices必须是list且恰好一项；缺少choice/message、非stop结束、content非str或空白均抛普通ValueError。在这些失败分支不调用解析器。
+4. 将原始content交给`parse_answer_json(content, expected_mode="model")`恰好一次，直接返回解析器得到的dict。不预先strip／dumps／截取或修补JSON，不从模型文本选expected_mode。
+
+JSON语法错误仍为JSONDecodeError，字段错误为ValueError；SDK调用异常原样传播，不吞掉、不自动重试或返回模拟答案。函数不打印、输入、访问文件，不关闭调用方传入的客户端。finish_reason==stop仅是本课接收策略，仍须字段校验，不等于事实正确或来源存在。
+
+最小语法示例：`print("甲", "乙", **{"sep": " | "})`等价于传sep命名参数；这里并未生成JSON字符串。完整问答流程由学员实现。可复用阶段2／3中已学的getattr和异常传播，不复制旧ask_turn或接入多轮、流式、存档。
+
+已提供ask_structured占位及test/check_s4_03b.py，解析器扩展由学员完成。运行`.venv/bin/python test/check_s4_03b.py`，实际占位基线 **1/12、退出码1**，仅旧S4-03A及全链回归通过；目标12/12、退出码0。实现后加`--demo`看假响应→调用接线→dict的完整离线演示。演示中的mode=model只是被测响应协议，数据由假客户端提供，不能记为真实生成。
+
+默认检查隔离真实环境、阻断网络，使用内存假客户端和临时旧课副本，不读.env／Key或真实会话。本课只返回回答dict，尚未保留usage；S4-03C在真实评估前补齐usage／finish_reason记录并另说明用途和调用规模。本课真实调用计划0次、无新增真实费用；不把假usage当费用，不提前执行C。
+
+完成后提交检查及--demo输出，并解释“为什么expected_mode由调用方传入，而不能从模型输出的mode自动选择？”通过后同轮更新记录、上传GitHub并布置下一小课；未通过时只修本课。
+
+2026-11-02核对[Kimi JSON Mode与content解析](https://platform.kimi.com/docs/guide/use-json-mode-feature-of-kimi-api)、[Kimi K3](https://platform.kimi.com/docs/guide/kimi-k3-quickstart)、[OpenAI Docs的Python兼容SDK调用形状](https://developers.openai.com/api/reference/python/resources/chat/subresources/completions/methods/create)。本地已安装openai 3.37.0的create签名包含本工程六字段；未升级依赖、不将OpenAI模型规则套用于Kimi，不承诺真实账户可用性。

@@ -88,7 +88,60 @@ def build_structured_request(question: str) -> dict:
     输入、六个请求字段及提示词要求见LEARNING_PLAN.md。
     返回内存dict；不打印、不加载配置、不调用SDK或解析回答。
     """
-    raise NotImplementedError("请完成S4-03A的build_structured_request")
+    if not isinstance(question, str):
+        raise TypeError("question 必须是 str")
+
+    question = question.strip()
+    if not question:
+        raise ValueError("question 不能为空")
+
+    system_prompt = """你是一名中文历史地理问答助手。每次回答只输出一个 JSON 对象，不要输出代码围栏（如 ```json），不要输出任何解释文字或前后缀，JSON 之外不能有任何内容。
+
+输出对象恰好包含以下五个字段，字段名和值严格如下：
+
+{
+    "mode": "model",
+    "answer": "非空字符串",
+    "uncertainty": "非空字符串",
+    "source_status": "not_retrieved",
+    "sources": []
+}
+
+要求：
+- mode 固定为 "model"。
+- answer 为非空字符串，用中文回答用户的历史地理问题。
+- uncertainty 为非空字符串，说明回答的不确定程度；用户基于虚构前提提问时明确说明，不编造真实年份或来源。
+- source_status 固定为 "not_retrieved"，表示尚未检索资料。
+- sources 固定为空列表 []，不虚构来源。
+"""
+    return {
+        "model": "kimi-k3",
+        "messages": [
+        {
+            "role": "system",
+            "content": system_prompt
+        },
+        {
+            "role": "user",
+            "content": question
+        }
+
+        ],
+        "response_format": {"type": "json_object"},
+        "stream": False,
+        "max_completion_tokens": 4096,
+        "reasoning_effort": "low",
+    }
+
+
+
+def ask_structured(client, question: str) -> dict:
+    """S4-03B：使用传入客户端请求一次，校验响应后返回回答dict。
+
+    配合parse_answer_json的显式expected_mode扩展；具体规则见学习计划。
+    本课用假客户端离线检查，不在此创建客户端、打印或处理重试。
+    """
+    raise NotImplementedError("请完成S4-03B的ask_structured及解析器模式扩展")
 
 
 def main() -> None:
