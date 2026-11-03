@@ -115,18 +115,22 @@ STAGE3_REVIEW.md保留四场景、真实验证状态和导师示范说明；阶�
 
 2026-11-03：lookup_place源码42757a33通过test/check_s4_04.py **10/10、退出码0**及--demo。只查虚构练习目录，source_status=fixture；未命中是当前目录没有记录，下一步由调用方决定。未新增模型调用，不代表史实或模型工具调用已核实。
 
-## 当前 S4-05：读取模型提出的工具请求
+## S4-05：读取工具请求已离线验收
 
-只实现stage4_tools.py中已添加占位的parse_tool_request(assistant_message: dict) -> dict | None，保留lookup_place与CLI。读取完整的非流式assistant消息；无调用返回None，单次lookup_place调用解析arguments字符串并校验，返回tool_call_id/tool_name/arguments，不执行查询。完整规则及示例见LEARNING_PLAN.md。
+2026-11-03：parse_tool_request源码1721087a通过test/check_s4_05.py **12/12、退出码0**及--demo。只证明读取假调用请求的程序行为；真实tool_calls中的参数由模型生成，工具由程序执行，概念理解仍待下课练习巩固。
+
+## 当前 S4-06A：执行工具并构造回传消息
+
+在stage4_tools.py完成新占位execute_tool_request(assistant_message: dict) -> dict | None：复用解析器一次，无调用返回None；有调用时执行lookup_place一次，把完整结果序列化为role=tool消息。具体字段／异常规则见LEARNING_PLAN.md；保留旧函数和入口。
 
 ```bash
 cd /Users/leon/workspace/PythonProject/history-ai-agent
-.venv/bin/python -B test/check_s4_05.py
-# 实现后查看假消息与解析结果
-.venv/bin/python -B test/check_s4_05.py --demo
+.venv/bin/python -B test/check_s4_06a.py
+# 完成后观察解析 → 本地查询 → tool消息
+.venv/bin/python -B test/check_s4_06a.py --demo
 ```
 
-占位基线 **1/12、退出码1**，S4-04及此前全链回归通过，目标12/12和--demo退出码0。检查不读.env／Key、不执行查询或发送模型请求；使用现有SDK的消息DTO验证字段结构，不创建客户端。本课不改旧核心／真实入口，工具执行与回填留到下一课。
+占位基线 **1/10、退出码1**，S4-05及此前全链通过，目标10/10及--demo退出码0。本课用假调用消息实际执行本地虚构目录工具；不读Key或调用模型，尚未把结果发回模型。S4-06B再学习模型续答，不提前实现。
 
 ## 每课验收后的 GitHub 同步
 
