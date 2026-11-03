@@ -150,17 +150,19 @@ def extract_response_metadata(response) -> dict:
     四字段、缺失与回调接线规则见LEARNING_PLAN.md；不判断回答成功。
     本函数由学员实现，不请求模型或计算费用。
     """
+    # 结束原因：只有「恰好一个 choice 的 list」才取它，其余（None/空/元组/多个）为 None
     choices = getattr(response, "choices", None)
     if isinstance(choices, list) and len(choices) == 1:
         finish_reason = getattr(choices[0], "finish_reason", None)
     else:
         finish_reason = None
 
+    # 用量：缺失或 None 时三者为 None；用 getattr 取值，0 会如实保留、不会被 or 改成 None
     prompt_tokens = None
     completion_tokens = None
     total_tokens = None
     usage = getattr(response, "usage", None)
-    if usage is not None :
+    if usage is not None:
         prompt_tokens = getattr(usage, "prompt_tokens", None)
         completion_tokens = getattr(usage, "completion_tokens", None)
         total_tokens = getattr(usage, "total_tokens", None)
@@ -218,6 +220,8 @@ def ask_structured(client, question: str, *, on_metadata=None) -> dict:
 
 
 def main() -> None:
+    """离线演示入口：构造模拟回答、往返解析一次、再打印可读 JSON。"""
+
     result = make_mock_answer(
         "这是一条结构化输出的离线示例。",
         "未调用模型或检索资料，示例不代表经核实的史实。",

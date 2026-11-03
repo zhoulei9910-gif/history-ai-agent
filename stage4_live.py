@@ -3,7 +3,8 @@
 import argparse
 import json
 
-from stage4_structured import ask_structured, build_structured_request
+from openai import OpenAI, APIError
+from stage4_structured import ask_structured, build_structured_request, extract_response_metadata
 
 SOURCE_LABEL = "模型生成｜未检索来源"
 
@@ -22,11 +23,40 @@ def run_live(question: str) -> int:
     本函数手动运行会付费，离线检查使用假配置及SDK内存HTTP传输。
     成功返回0；输入、配置、SDK或回答格式失败返回1；要求见学习计划。
     """
-    raise NotImplementedError("请完成S4-03D的run_live；先运行离线检查")
+    # 1) 先校验问题：非 str 或 strip 后为空，在读取配置/创建客户端前返回 1
+    if not question or not isinstance(question, str) or not question.strip():
+        print("question必须为str，且不能为空")
+        return 1
+
+    captured = []  # 用列表承接 on_metadata 回调发来的元数据；captured.append 才是可调用对象
+    # 2) 配置导入放函数内：只在真正要调模型时才 import config → 加载 .env
+    from config import get_api_key
+    from config import get_base_url
+    try:
+        # try 包住整个 with，缺 Key 的 ValueError 也能被接住
+        with OpenAI(
+            api_key=get_api_key("kimi"),
+            base_url=get_base_url("kimi"),
+            timeout=120,
+            max_retries=0,
+        ) as client:
+            answer = ask_structured(client, question, on_metadata = captured.append)
+
+            # 成功：打印来源标签和已校验的回答 JSON，返回 0
+            print(SOURCE_LABEL)
+            print(json.dumps(answer, ensure_ascii=False, indent=4))
+            return 0
+    except (TypeError, ValueError, APIError):
+        # 输入/配置/SDK/回答格式失败：安全提示，返回 1
+        print("调用模型失败")
+        return 1
+    finally:
+        # 无论成功失败都展示元数据；SDK 失败无响应时 captured 为空 → 显示"未知"
+        show_metadata(captured[0] if captured else {})
 
 
 def main(argv=None) -> int:
-    """导师提供的参数入口：默认预览，--live才调用run_live。"""
+    """提供的参数入口：默认预览，--live才调用run_live。"""
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("question", help="本次地理或历史问题")
     parser.add_argument("--live", action="store_true", help="执行一次真实付费模型请求")

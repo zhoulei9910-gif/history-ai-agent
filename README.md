@@ -107,19 +107,22 @@ STAGE3_REVIEW.md保留四场景、真实验证状态和导师示范说明；阶�
 
 2026-11-03：学员实现元数据提取与on_metadata接线，核心b302cbcc实际通过test/check_s4_03c.py **12/12、退出码0**，--demo成功。缺失／零统计、失败前通知、回调隔离、异常传播及旧回归通过；JSON失败演示仍收到假统计。S4-03C离线功能验收完成，没有新增真实模型请求或费用。
 
-## 当前 S4-03D：单次真实客户端入口
+## S4-03D：客户端入口程序验收通过
 
-stage4_structured.py保留纯核心；新入口stage4_live.py的参数／展示脚手架已提供，只由学员实现run_live。读取Kimi配置、创建timeout=120/max_retries=0客户端、调用ask_structured一次，成功失败都关闭资源并展示元数据，规则见学习计划。
+2026-11-03：最新入口962f0be9离线10/10通过，真实SDK＋内存假HTTP验证接线、预算、失败统计与关闭；旧回归保持。学员已补E14/E15的stop与用量并自评通过；正文／判定理由待补，导师质量判定及实际费用仍未知，不重复调用。
+
+## 当前 S4-04：确定性地名查询工具
+
+stage4_tools.py已提供两条虚构目录和CLI，只实现lookup_place：精确匹配标准名／别名，返回query/found/place/source_status，来源固定fixture。未命中返回False和None，不捏造条目；数据隔离和输入规则见学习计划。
 
 ```bash
-.venv/bin/python test/check_s4_03d.py
-# 实现后使用假HTTP演示，不读Key或请求模型
-.venv/bin/python test/check_s4_03d.py --demo
-# 默认只预览请求，不读Key
-.venv/bin/python stage4_live.py "为什么河流会影响城市的发展？"
+.venv/bin/python test/check_s4_04.py
+# 实现后查看两个离线查询结果
+.venv/bin/python test/check_s4_04.py --demo
+.venv/bin/python stage4_tools.py "青岚"
 ```
 
-占位基线 **2/10、退出码1**，目标10/10；旧S4-03C及此前回归通过。离线通过后，学员手动为E14/E15各加--live执行一次，最多2次付费请求；用途是验证真实格式／质量／用量，不自动重试。没有Key或暂不付费可先注明仅离线，真实评估继续待验证。
+占位基线 **1/10、退出码1**，旧S4-03D及全链回归通过；目标10/10。工具不调用模型，不读取Key，fixture不是历史资料。本课不改原核心／客户端入口；模型提出工具请求在下一课再接。
 
 ## 每课验收后的 GitHub 同步
 
