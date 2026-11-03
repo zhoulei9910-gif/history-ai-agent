@@ -150,10 +150,32 @@ def extract_response_metadata(response) -> dict:
     四字段、缺失与回调接线规则见LEARNING_PLAN.md；不判断回答成功。
     本函数由学员实现，不请求模型或计算费用。
     """
-    raise NotImplementedError("请完成S4-03C元数据提取与on_metadata回调接线")
+    choices = getattr(response, "choices", None)
+    if isinstance(choices, list) and len(choices) == 1:
+        finish_reason = getattr(choices[0], "finish_reason", None)
+    else:
+        finish_reason = None
+
+    prompt_tokens = None
+    completion_tokens = None
+    total_tokens = None
+    usage = getattr(response, "usage", None)
+    if usage is not None :
+        prompt_tokens = getattr(usage, "prompt_tokens", None)
+        completion_tokens = getattr(usage, "completion_tokens", None)
+        total_tokens = getattr(usage, "total_tokens", None)
+
+    return {
+        "finish_reason": finish_reason,
+        "prompt_tokens": prompt_tokens,
+        "completion_tokens": completion_tokens,
+        "total_tokens": total_tokens
+    }
+
+    # raise NotImplementedError("请完成S4-03C元数据提取与on_metadata回调接线")
 
 
-def ask_structured(client, question: str) -> dict:
+def ask_structured(client, question: str, *, on_metadata=None) -> dict:
     """使用传入客户端请求一次，校验响应包络后返回已校验的回答dict。
 
     本课用假客户端离线检查，不在此创建客户端、打印或处理重试；
@@ -162,12 +184,19 @@ def ask_structured(client, question: str) -> dict:
     # 1) 构造请求（内部完成 question 的类型/空白校验）
     request = build_structured_request(question)
 
+    if on_metadata is not None and not callable(on_metadata):
+        raise TypeError("on_metadata 必须是可调用对象或 None")
+
     # 2) 请求一次：SDK 异常原样向上传播，不捕获、不重试
     response = client.chat.completions.create(**request)
 
+    if on_metadata is not None:
+        metadata = extract_response_metadata(response)
+        on_metadata(metadata)
+
     # 3) 校验响应包络，逐层用 getattr，缺失或结构错误统一 ValueError
     choices = getattr(response, "choices", None)
-    if not isinstance(choices, (list)) or len(choices) != 1:
+    if not isinstance(choices, list) or len(choices) != 1:
         raise ValueError("响应 choices 必须恰好一个")
     choice = choices[0]
     if choice is None:

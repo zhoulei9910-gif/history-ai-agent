@@ -103,17 +103,23 @@ STAGE3_REVIEW.md保留四场景、真实验证状态和导师示范说明；阶�
 
 2026-11-02：学员将choices类型收窄为list（保留长度检查），入口ec31245b实际通过补强后的test/check_s4_03b.py **12/12、退出码0**，--demo成功。单项tuple拒绝、显式模式、响应检查、异常传播及旧回归均离线通过，S4-03B功能验收完成。此前87aebdc0的11/12保留为修正过程，不当作当前得分；未请求真实模型，不证明模型质量或史实。
 
-## 当前 S4-03C：失败响应也保留元数据
+## S4-03C：元数据观测离线验收通过
 
-在stage4_structured.py实现extract_response_metadata四字段提取，并为ask_structured增加可选on_metadata回调；响应返回后、答案校验前交出元数据，旧返回值保持。详细缺失／零值／异常契约见学习计划。
+2026-11-03：学员实现元数据提取与on_metadata接线，核心b302cbcc实际通过test/check_s4_03c.py **12/12、退出码0**，--demo成功。缺失／零统计、失败前通知、回调隔离、异常传播及旧回归通过；JSON失败演示仍收到假统计。S4-03C离线功能验收完成，没有新增真实模型请求或费用。
+
+## 当前 S4-03D：单次真实客户端入口
+
+stage4_structured.py保留纯核心；新入口stage4_live.py的参数／展示脚手架已提供，只由学员实现run_live。读取Kimi配置、创建timeout=120/max_retries=0客户端、调用ask_structured一次，成功失败都关闭资源并展示元数据，规则见学习计划。
 
 ```bash
-.venv/bin/python test/check_s4_03c.py
-# 实现后查看正常与JSON失败的假客户端演示
-.venv/bin/python test/check_s4_03c.py --demo
+.venv/bin/python test/check_s4_03d.py
+# 实现后使用假HTTP演示，不读Key或请求模型
+.venv/bin/python test/check_s4_03d.py --demo
+# 默认只预览请求，不读Key
+.venv/bin/python stage4_live.py "为什么河流会影响城市的发展？"
 ```
 
-占位基线 **1/12、退出码1**，旧补强B及全链回归通过；目标12/12。仅离线假数据，不读Key或调用模型，不把假用量当费用。原main仍输出模拟答案；真实接线与人工评估留S4-03D另行布置。
+占位基线 **2/10、退出码1**，目标10/10；旧S4-03C及此前回归通过。离线通过后，学员手动为E14/E15各加--live执行一次，最多2次付费请求；用途是验证真实格式／质量／用量，不自动重试。没有Key或暂不付费可先注明仅离线，真实评估继续待验证。
 
 ## 每课验收后的 GitHub 同步
 
