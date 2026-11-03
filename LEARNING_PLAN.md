@@ -60,8 +60,9 @@ S1-01、S1-02 已通过；S2-01～S2-03 程序验收及当前提示词人工审�
 | S4-03 | 接入模型结构化输出（程序已验收） | D离线10/10；学员报告真实已运行，输出和质量判定待补。 |
 | S4-04 | 实现一个确定性工具（离线已验收） | 本地地名条目查询可独立运行，练习资料明确标注来源或模拟状态。 |
 | S4-05 | 读取模型提出的工具请求（离线程序已验收） | 识别工具名称与参数，理解它尚未被程序执行。 |
-| S4-06A | 执行工具并构造回传消息（当前） | 单次受控执行，role=tool关联调用ID，完整序列化结果。 |
-| S4-06B | 回填工具结果并让模型续答 | 保留完整assistant后追加tool消息，完成有限固定流程。 |
+| S4-06A | 执行工具并构造回传消息（离线已验收） | 单次受控执行，role=tool关联调用ID，完整序列化结果。 |
+| S4-06B | 回填工具结果并让模型续答（当前） | 从已有调用消息出发，保留完整assistant并追加tool，只请求一次续答。 |
+| S4-06C | 接通首轮调用请求与续答 | 加入模型首轮生成tool_calls，形成有限两次请求的固定流程。 |
 | S4-07 | 处理工具参数与执行失败 | 未知工具、无效参数、无结果或异常得到明确处理。 |
 | S4-08 | 固定流程与阶段评估 | 对比直接回答与工具辅助流程，记录正确性、调用次数和用量。 |
 
@@ -737,7 +738,7 @@ message = {
 
 概念小问待巩固：学员提到尚未给模型生成入参，回答未明确区分本课离线假消息与真实响应。导师补充：本课确实没有请求模型；真实tool_calls已经包含模型生成的工具名和JSON参数，解析后由程序执行lookup_place，再把工具结果回传给模型。此处仅记录一次表述待澄清，不判断为反复出错或已掌握。下一课用实际执行练习检验迁移。
 
-## 当前 S4-06A：执行工具并构造回传消息（待实现）
+## S4-06A：执行工具并构造回传消息（离线已验收）
 
 一个30～45分钟目标：把经过校验的调用请求变成一次Python函数执行及一条可回传的tool消息。为巩固调用方向，将原S4-06拆成A（本地执行与消息）和B（下一课接模型续答），每次保留一个目标；本课不请求模型。
 
@@ -772,3 +773,42 @@ message = {
 完成后提供检查和演示输出，并指出你代码中“哪一行真正执行了地名查询”。验收后同轮布置S4-06B及检查并上传；该下一课再追加完整assistant和tool消息并做有限模型续答，不在本课提前实现循环。E14/E15已有回答正文／理由仍可补录，无需为补证据重跑。
 
 2026-11-03已查询[Kimi工具调用官方说明](https://platform.kimi.com/docs/guide/use-kimi-api-to-complete-tool-calls)：应用执行工具后用role、tool_call_id、name和序列化content回传。此处是自定义本地函数工具，模型输出请求与程序执行分别记录。本课未新增依赖、模型参数或真实API验证，真实请求计划0次。
+
+2026-11-03：学员提交execute_tool_request，工具源码a4ca67f6由导师实际运行test/check_s4_06a.py **10/10、退出码0**，--demo退出码0。复用解析器、单次执行、四字段tool消息、完整序列化、无调用／非法输入零查询、异常传播与隔离及旧回归通过；S4-06A离线程序验收完成，新增真实模型请求0次。
+
+学员指出第38行：该行确实是工具内部的目录匹配条件；导师补充第138行lookup_place(...)是从execute_tool_request发起工具执行的调用点。区分内部查找逻辑与调用入口，不据行号回答或测试通过标全面掌握；下一课检验完整消息关联。
+
+## 当前 S4-06B：一次工具结果续答（待实现）
+
+一个30～60分钟目标：收到已有的assistant工具调用消息后，执行本地工具，把完整协议回填给模型请求一次续答，复用五字段答案校验。新增当前所需编排模块stage4_tool_flow.py，不修改纯工具模块、旧核心、真实入口或阶段3代码。S4-06C再接首轮生成调用消息，本课不提前实现完整两次请求或Agent循环。
+
+最多三个概念：①回填顺序是system → 原user → 完整assistant调用消息 → tool结果，完整assistant保留tool_calls／reasoning_content，不能只留content；②tools是能力描述，tool_choice=none约束本次只续答，应用仍检查结束原因，不继续执行新调用；③编排复用已验收模块，类似Kotlin UseCase依次调用Repository；Python list存对象引用，因此将外部assistant深拷贝后放入新请求，避免嵌套对象共享。
+
+导师已提供三个辅助：build_followup_request(question)沿用旧六字段请求与问题校验，额外提供tools和tool_choice=none，并说明fixture是虚构教学数据；execute_tool_request来自S4-06A；parse_final_response(response)沿用旧包络和五字段解析，必须stop且无新调用。extract_response_metadata亦可直接复用，不需要改写这些辅助。默认CLI只预览基础参数，不创建client、不读配置或发请求。
+
+只由学员实现ask_after_tool(client, question: str, assistant_message: dict, *, on_metadata=None) -> dict：
+
+1. 调用build_followup_request(question)得到独立请求，非str／空白沿用TypeError／ValueError。on_metadata不为None时须callable，否则TypeError；两项输入校验都在工具执行和SDK请求之前。
+2. 恰好复用execute_tool_request(assistant_message)一次。若返回None，说明本续答函数没有有效调用要回填，抛ValueError且零SDK请求；解析／工具异常原样传播，不请求模型、不重试或伪造结果。
+3. 保留请求中已有system/user，在后面依次追加deepcopy(assistant_message)和执行器返回的tool消息。完整保留assistant原字段和调用ID，不把整条消息json.dumps；tool.content已经是JSON字符串。
+4. 使用外部client.chat.completions.create(**request)恰好一次。保留八个请求字段，不重新创建／关闭client，不读取配置或添加自动重试。SDK异常原样传播，无响应就不通知元数据。
+5. 收到响应后，若有on_metadata，先调用一次on_metadata(extract_response_metadata(response))，然后才做回答校验；None时跳过提取。缺失统计保留None、0保留；回调异常原样传播，不继续校验或重试。
+6. 最后返回parse_final_response(response)得到的五字段dict。结束length、tool_calls、空正文或坏JSON等原样失败，不再查询、不发第二次请求，不返回工具结果冒充模型答案。函数不打印，也不修改输入消息、目录或SDK响应。
+
+最小消息顺序示例（仅结构，不是完整实现）：
+
+```python
+# 原有基础请求中已经有system和user
+# 应得到四条消息：
+# [system消息, user消息, 完整assistant调用消息, tool结果消息]
+```
+
+最终回答沿用mode=model、source_status=not_retrieved、sources=[]；这里not_retrieved表示没有检索真实资料，工具内部fixture状态完整保留在tool.content。提示词要求说明虚构设定，但实际模型能否遵守仍须后续人工评估，不能由离线检查证明。本课假SDK正文与token数不当作真实结果。
+
+运行`.venv/bin/python -B test/check_s4_06b.py`，实际占位 **2/12、退出码1**，安全预览与S4-06A及此前全链回归通过；目标12/12，实现后加--demo退出码0。演示显示四条消息、模拟五字段续答和模拟元数据；SDK方法调用1次来自假client，本地查询1次，真实模型请求0次，不需要Key。
+
+检查器临时控制实测：正向12/12、演示退出码0；遗漏assistant消息10/12、解析后才通知统计10/12、重复执行工具4/12，均检出。参考实现不写入学员工程，不计为学员完成。检查覆盖输入与协议、请求预算、来源状态、元数据先后、失败不循环、client所有权和新旧结果隔离。
+
+完成后交检查与--demo输出，回答“为什么不能只把tool结果发给模型，而省略前面的assistant调用消息？”验收后同轮布置S4-06C检查、更新记录并上传。真实模型请求计划0次，E14/E15正文和具体理由仍待补，已有输出即可，不为补记录重复调用。
+
+2026-11-03查询[Kimi工具调用消息顺序](https://platform.kimi.com/docs/guide/use-kimi-api-to-complete-tool-calls)、[tool_choice约束](https://platform.kimi.com/docs/guide/use-tool-choice)及[Kimi K3完整assistant要求](https://platform.kimi.com/docs/guide/kimi-k3-quickstart)；本地SDK 3.37.0的ChatCompletionToolChoiceOptionParam确认支持none，ChatCompletion/ChatCompletionMessage DTO在离线检查使用。保留现有模型和预算，不升级依赖；本课不声称验证Kimi真实生成、传输或计费。

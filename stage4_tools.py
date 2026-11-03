@@ -122,13 +122,28 @@ def parse_tool_request(assistant_message: dict) -> dict | None:
 
 
 def execute_tool_request(assistant_message: dict) -> dict | None:
-    """S4-06A由学员实现：解析后执行一次本地工具，构造回传消息。
+    """S4-06A：解析后执行一次本地工具，构造回传消息。
 
-    复用parse_tool_request；无调用返回None，有调用执行lookup_place一次。
-    返回role/tool_call_id/name/content；content是完整工具结果的JSON字符串。
+    复用 parse_tool_request；无调用返回 None，有调用执行 lookup_place 一次。
+    返回 role/tool_call_id/name/content 四字段新 dict；
+    content 是 lookup_place 完整结果的 JSON 字符串（ensure_ascii=False）。
     不调用模型、不改原消息、不打印；解析或工具异常原样传播，不重试。
     """
-    raise NotImplementedError("请完成S4-06A的execute_tool_request")
+    # 1) 复用已验收的解析器；无结构化调用直接返回 None
+    request = parse_tool_request(assistant_message)
+    if request is None:
+        return None
+
+    # 2) 用解析后的 name 执行一次工具（不是原始 JSON 字符串）
+    result = lookup_place(request["arguments"]["name"])
+
+    # 3) 构造四字段 tool 回传消息：id 关联原始调用、content 完整保留工具结果
+    return {
+        "role": "tool",
+        "tool_call_id": request["tool_call_id"],
+        "name": request["tool_name"],
+        "content": json.dumps(result, ensure_ascii=False),
+    }
 
 
 def main(argv=None) -> int:
