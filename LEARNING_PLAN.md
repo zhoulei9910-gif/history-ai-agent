@@ -58,8 +58,8 @@ S1-01、S1-02 已通过；S2-01～S2-03 程序验收及当前提示词人工审�
 | S4-01 | 定义结构化回答契约（离线已验收） | 确定答案、不确定性、来源状态等字段及合法示例。 |
 | S4-02 | 解析并校验结构化结果（离线已验收） | 缺字段、错误类型和非法 JSON 能被明确拒绝。 |
 | S4-03 | 接入模型结构化输出（程序已验收） | D离线10/10；学员报告真实已运行，输出和质量判定待补。 |
-| S4-04 | 实现一个确定性工具（当前） | 本地地名条目查询可独立运行，练习资料明确标注来源或模拟状态。 |
-| S4-05 | 读取模型提出的工具请求 | 识别工具名称与参数，理解它尚未被程序执行。 |
+| S4-04 | 实现一个确定性工具（离线已验收） | 本地地名条目查询可独立运行，练习资料明确标注来源或模拟状态。 |
+| S4-05 | 读取模型提出的工具请求（当前） | 识别工具名称与参数，理解它尚未被程序执行。 |
 | S4-06 | 执行工具并回填结果 | 程序完成一次受控调用，模型根据工具结果继续回答。 |
 | S4-07 | 处理工具参数与执行失败 | 未知工具、无效参数、无结果或异常得到明确处理。 |
 | S4-08 | 固定流程与阶段评估 | 对比直接回答与工具辅助流程，记录正确性、调用次数和用量。 |
@@ -655,7 +655,7 @@ E14问题为“为什么河流会影响城市的发展？”；E15为“我捏�
 
 学员本轮报告E14/E15已真实运行，并在评估表补录：E14为stop、333/387/720，E15为stop、344/142/486，均自评通过。以上计数按学员记录保留；回答正文和具体判定理由仍待补，导师暂不将真实格式／质量标通过，实际费用未知。无需重复调用，导师本轮未发模型请求。
 
-## 当前 S4-04：实现确定性地名工具（待实现）
+## S4-04：实现确定性地名工具（离线已验收）
 
 一个30～45分钟目标：用程序查询固定目录并返回明确结果，为后续模型提出工具调用请求做准备。新增stage4_tools.py；两条目录与CLI由导师提供，只由学员实现lookup_place(name: str) -> dict，不修改旧问答、SDK入口或解析器。
 
@@ -683,3 +683,51 @@ E14问题为“为什么河流会影响城市的发展？”；E15为“我捏�
 检查覆盖标准名、别名、空白、未知、非法输入、fixture标记、嵌套隔离、替换／空目录、CLI及旧回归；不接模型、不加载配置／Key或真实会话。本课真实调用计划0次。模型如何提出调用请求、程序如何读取请求留到S4-05，不提前实现工具选择、回填或Agent循环。
 
 完成后提交检查与--demo输出，并回答“为什么合法但未收录的地名应返回found=False，而空白参数要报错？”通过后同轮提供S4-05检查、更新记录并上传GitHub。E14/E15已有真实输出可随时补录，不重跑，不用工具假数据替代真实评估。
+
+2026-11-03：学员实现lookup_place，工具源码42757a33由导师实际运行test/check_s4_04.py **10/10、退出码0**，--demo成功。标准名／别名、空白／未知／错误输入、fixture标记、嵌套隔离、替换目录与CLI及旧回归均通过，S4-04离线功能验收完成；未新增真实模型请求。
+
+学员正确区分空白无效参数与合法未命中。补充澄清：found=False只表示当前目录未收录，是否继续查询由调用方决定，工具不会自动继续查，也不证明地名不存在。这是本次单次澄清，不据测试通过标全面掌握。学员在旧检查中新增一行未使用局部变量，原断言未删改，不影响本次验收。
+
+## 当前 S4-05：读取一次工具请求（待实现）
+
+一个30～60分钟目标：从完整的非流式assistant消息中提取并验证一次调用请求。仍在同阶段stage4_tools.py，只实现导师新加的parse_tool_request(assistant_message: dict) -> dict | None占位；保留lookup_place、目录和CLI，不改旧核心／模型入口，不执行工具，也不请求模型。
+
+最多三个概念：①tool_calls是模型提出的结构化调用，正文提到函数名不算调用，执行仍由程序负责；②function.arguments是嵌套JSON字符串，需要json.loads后再做业务校验，类似Kotlin先从响应中取出一段JSON文本再反序列化，Python dict不会自动校验字段；③调用id用于后续工具结果关联，只检查为非空白str，原样保留，不像地名那样strip后返回。
+
+下面是假消息的协议示例，不是真实模型调用，也不是工具查询结果：
+
+```python
+message = {
+    "role": "assistant",
+    "content": None,
+    "tool_calls": [{
+        "id": "call_lookup_1",
+        "type": "function",
+        "function": {
+            "name": "lookup_place",
+            "arguments": '{"name": " 青岚 "}',
+        },
+    }],
+}
+# parse_tool_request(message)期望：
+# {"tool_call_id": "call_lookup_1", "tool_name": "lookup_place",
+#  "arguments": {"name": "青岚"}}
+```
+
+输入与分支契约：
+
+1. 顶层必须dict，否则TypeError；role必须恰好assistant，否则ValueError。允许content、reasoning_content等额外SDK字段，不丢弃或修改原消息。
+2. tool_calls缺失、None或空list表示没有调用，返回None；其他值必须list且只有一项。其他类型、超过一项或项不是dict都ValueError；不能用if not calls把空dict／空字符串也当作无调用。本课只处理单次调用是练习范围，不是API能力限制。
+3. 单项id必须非空白str，type恰好function，function必须dict，function.name恰好lookup_place；缺失、不合法或未知工具均ValueError。id校验可用strip，但返回原字符串；工具名不私自去空白或动态eval／执行。
+4. function.arguments必须str，缺失或其他类型ValueError；用json.loads解析，JSON语法错误保留json.JSONDecodeError，不修补或剥离代码围栏。解码后必须dict且恰好一个name字段，name是非空白str；业务错误用普通ValueError。清理并保存name.strip()。
+5. 返回新dict，恰好tool_call_id/tool_name/arguments三字段；arguments为新dict且恰好清理后的name。每次结果相互独立，不修改原消息／目录、不打印、不查地名。合法未知名称同样能解析成功，查询是否命中留给工具执行。
+
+可按“顶层和无调用分支 → 单项协议 → 解码及参数 → 新结果”逐步实现，不需引入类、框架或新依赖。真实SDK消息后续可用response.choices[0].message.to_dict()作为输入；to_dict只把DTO转成dict，不把arguments字符串再解码。本课使用假消息和SDK DTO检查，不建立真实client。
+
+运行`.venv/bin/python -B test/check_s4_05.py`，导师实际占位基线 **1/12、退出码1**，S4-04及此前回归通过，目标12/12；实现后加--demo，看到假消息变成三字段请求，以及无调用为null（Python None）。不在此处调用lookup_place，不回填role=tool，不接多轮／流式或Agent循环；真实模型请求计划0次。
+
+检查器控制在临时工程实际验证：正向12/12、演示退出码0；误执行工具7/12、参数保持字符串7/12、擅自strip调用ID11/12，均检出。参考实现不写入学员工程，不计为学员完成。检查覆盖正常／异常／边界、原消息隔离、现有SDK DTO桥接及旧回归，不改变旧断言。
+
+完成后交检查和--demo输出，并说明“成功解析tool_calls，为什么仍不能说工具已执行？”验收后同轮布置下一课并上传。E14/E15正文与具体判定理由仍待补，已有输出即可，不重复付费调用。
+
+2026-11-03核对[Kimi工具调用协议](https://platform.kimi.com/docs/guide/use-kimi-api-to-complete-tool-calls)：模型提出工具名及JSON参数，应用执行，结果用tool_call_id关联；[Kimi K3指南](https://platform.kimi.com/docs/guide/kimi-k3-quickstart)要求后续保留完整assistant消息。现有本地SDK 3.37.0的chat_completion_message_function_tool_call.py与_models.py核对arguments:str和to_dict；本课未升级依赖。暂不处理流式工具分片或多调用，不声称已验证真实工具选择。

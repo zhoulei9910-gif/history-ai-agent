@@ -111,18 +111,22 @@ STAGE3_REVIEW.md保留四场景、真实验证状态和导师示范说明；阶�
 
 2026-11-03：最新入口962f0be9离线10/10通过，真实SDK＋内存假HTTP验证接线、预算、失败统计与关闭；旧回归保持。学员已补E14/E15的stop与用量并自评通过；正文／判定理由待补，导师质量判定及实际费用仍未知，不重复调用。
 
-## 当前 S4-04：确定性地名查询工具
+## S4-04：确定性地名查询已离线验收
 
-stage4_tools.py已提供两条虚构目录和CLI，只实现lookup_place：精确匹配标准名／别名，返回query/found/place/source_status，来源固定fixture。未命中返回False和None，不捏造条目；数据隔离和输入规则见学习计划。
+2026-11-03：lookup_place源码42757a33通过test/check_s4_04.py **10/10、退出码0**及--demo。只查虚构练习目录，source_status=fixture；未命中是当前目录没有记录，下一步由调用方决定。未新增模型调用，不代表史实或模型工具调用已核实。
+
+## 当前 S4-05：读取模型提出的工具请求
+
+只实现stage4_tools.py中已添加占位的parse_tool_request(assistant_message: dict) -> dict | None，保留lookup_place与CLI。读取完整的非流式assistant消息；无调用返回None，单次lookup_place调用解析arguments字符串并校验，返回tool_call_id/tool_name/arguments，不执行查询。完整规则及示例见LEARNING_PLAN.md。
 
 ```bash
-.venv/bin/python test/check_s4_04.py
-# 实现后查看两个离线查询结果
-.venv/bin/python test/check_s4_04.py --demo
-.venv/bin/python stage4_tools.py "青岚"
+cd /Users/leon/workspace/PythonProject/history-ai-agent
+.venv/bin/python -B test/check_s4_05.py
+# 实现后查看假消息与解析结果
+.venv/bin/python -B test/check_s4_05.py --demo
 ```
 
-占位基线 **1/10、退出码1**，旧S4-03D及全链回归通过；目标10/10。工具不调用模型，不读取Key，fixture不是历史资料。本课不改原核心／客户端入口；模型提出工具请求在下一课再接。
+占位基线 **1/12、退出码1**，S4-04及此前全链回归通过，目标12/12和--demo退出码0。检查不读.env／Key、不执行查询或发送模型请求；使用现有SDK的消息DTO验证字段结构，不创建客户端。本课不改旧核心／真实入口，工具执行与回填留到下一课。
 
 ## 每课验收后的 GitHub 同步
 

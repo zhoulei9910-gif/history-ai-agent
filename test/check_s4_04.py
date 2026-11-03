@@ -92,6 +92,7 @@ def main():
         app = module()
         for place in app.PLACE_FIXTURES:
             result = call(place['name'])
+            place_name = place['name']
             shape(result, place['name'])
             require(result == expected(place['name'], place), '精确命中标准名，返回目录完整条目')
 
