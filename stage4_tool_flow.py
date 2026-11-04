@@ -68,12 +68,16 @@ def ask_after_tool(client, question: str, assistant_message: dict, *, on_metadat
     request = build_followup_request(question)
     # print(f" request: {request}")
 
+    # print(f"\n ask_after_tool request {request}")
+
     # 2) on_metadata 非 None 时必须是可调用对象（在工具执行和 SDK 请求之前）
     if on_metadata is not None and not callable(on_metadata):
         raise TypeError("on_metadata 必须是可调用对象或 None")
 
     # 3) 执行一次工具；无有效调用抛 ValueError，零 SDK 请求
     tool_message = execute_tool_request(assistant_message)
+
+    # print(f"\n ask_after_tool tool_message {tool_message}")
 
     if tool_message is None:
         raise ValueError("本续答函数需要已有工具调用")
@@ -85,10 +89,12 @@ def ask_after_tool(client, question: str, assistant_message: dict, *, on_metadat
     # 5) 请求一次续答；SDK 异常原样传播，无响应不通知元数据
     response = client.chat.completions.create(**request)
 
+    # print(f"\n ask_after_tool response {response}")
     # 6) 收到响应后，先通知元数据，再校验回答
     if on_metadata is not None:
         on_metadata(extract_response_metadata(response))
 
+    # print(f"\n ask_after_tool parse_final_response {parse_final_response(response)}")
     # 7) 返回已校验的五字段续答
     return parse_final_response(response)
 
@@ -140,6 +146,7 @@ def ask_with_tool(client, question: str, *, on_metadata=None) -> dict:
     """
     # 1) 构造首轮请求（tool_choice=required），内部完成 question 校验
     request = build_initial_tool_request(question)
+    # print(f"\n ask_with_tool request {request}")
 
     # 2) on_metadata 非 None 时必须可调用（在两次 SDK 请求之前）
     if on_metadata is not None and not callable(on_metadata):
@@ -147,13 +154,18 @@ def ask_with_tool(client, question: str, *, on_metadata=None) -> dict:
 
     # 3) 首轮请求：SDK 异常原样传播，无响应不通知元数据
     response = client.chat.completions.create(**request)
+    # print(f"\n ask_with_tool response {response}")
+
 
     # 4) 收到首轮响应后，先通知一次元数据，再提取完整 assistant 消息
     if on_metadata is not None:
         on_metadata(extract_response_metadata(response))
 
+    # print(f"\n ask_with_tool meta_data {extract_response_metadata(response)}")
     # 5) 把完整 assistant（含 tool_calls）交给 B 执行工具并续答，直接返回其结果
     assistant_message = read_tool_call_response(response)
+
+    # print(f"\n ask_with_tool assistant_message {assistant_message}")
     return ask_after_tool(client, question, assistant_message, on_metadata=on_metadata)
 
 

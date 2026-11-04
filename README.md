@@ -131,18 +131,22 @@ STAGE3_REVIEW.md保留四场景、真实验证状态和导师示范说明；阶�
 
 2026-11-04：学员实现ask_with_tool，当前编排源码849978d5通过test/check_s4_06c.py **13/13、退出码0**；此前f64c1e3f的演示成功。正常两次SDK方法调用、一次本地虚构目录查询；真实SDK配内存HTTP，无真实模型调用。已有流程保留抛异常契约。
 
-## 当前 S4-07：把已知失败转换为安全结果
+## S4-07：失败结果边界已离线验收
 
-新增同阶段stage4_tool_app.py作为调用方边界；不改已验收流程。只实现run_tool_question(client, question)：调用ask_with_tool一次，用内部列表收集统计，成功／已知失败统一返回ok/answer/error/responses四字段。格式构造与离线示例由导师提供，异常映射见LEARNING_PLAN.md。
+2026-11-04：边界源码bd40e79d实际通过test/check_s4_07.py **12/12、退出码0**及--demo。已知失败返回固定错误码并保留已有响应统计；未知异常继续传播，旧回归通过。没有新增真实模型调用或质量结论。
+
+## 当前 S4-08：第四阶段离线评估报告
+
+本课只填写STAGE4_REVIEW.md，不新增业务功能。导师提供test/check_stage_4.py汇总检查和四个受控对比：直接问答、工具问答、未收录、续答JSON失败。运行--demo获取程序测量、指纹，再填写表格和三段自己的结论。
 
 ```bash
 cd /Users/leon/workspace/PythonProject/history-ai-agent
-.venv/bin/python -B test/check_s4_07.py
-# 实现后看成功、首轮失败和续答失败的结果及统计
-.venv/bin/python -B test/check_s4_07.py --demo
+.venv/bin/python -B test/check_stage_4.py --demo
+# 填写报告后运行完整汇总
+.venv/bin/python -B test/check_stage_4.py
 ```
 
-实际占位基线 **2/12、退出码1**，已提供格式与C全链回归通过，目标12/12和--demo退出码0。不创建客户端、不读Key、不重试、不连接模型；APIError／ValueError／RuntimeError按约定映射，其余异常传播。运行新模块本身只展示格式示例，不代表问答实现完成。
+实际模板基线 **2/4、退出码1**：S4-07全链和四个离线场景通过，报告表／结论待填；目标4/4及导师人工审阅结论。指纹b3dcb883来自五个声明文件，不是Git提交号。假SDK回答与token数不证明真实质量、延迟或实际费用；T3业务失败符合预期，统计不完整时合计未知。真实验证继续另列E14/E15，不要求重复调用。
 
 ## 每课验收后的 GitHub 同步
 

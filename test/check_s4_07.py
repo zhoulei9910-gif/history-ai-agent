@@ -97,6 +97,7 @@ def main():
                         received_question=positional[1] if len(positional)>1 else keywords.get('question')
                         require(received_client is client,'透传同一client')
                         require(isinstance(received_question,str) and received_question.strip()==question.strip(),'保留有效问题，不换成固定问题')
+                        print("keywords.get('on_metadata') ", keywords.get('on_metadata'))
                         require(callable(keywords.get('on_metadata')),'把内部统计收集函数传给on_metadata')
 
     def shape(result, *, answer=None, code=None, records=None):
