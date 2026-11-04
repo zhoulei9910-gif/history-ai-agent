@@ -123,20 +123,22 @@ STAGE3_REVIEW.md保留四场景、真实验证状态和导师示范说明；阶�
 
 2026-11-03：execute_tool_request源码a4ca67f6通过test/check_s4_06a.py **10/10、退出码0**及--demo；复用解析、单次查询、四字段tool消息、异常与旧回归通过。只查虚构目录，未调用真实模型。
 
-## 当前 S4-06B：把工具结果提交给模型续答
+## S4-06B：工具续答离线13/13验收通过
 
-新增同阶段编排模块stage4_tool_flow.py，保留stage4_tools.py及旧入口。导师提供请求构造、响应校验和默认预览；只实现ask_after_tool(client, question, assistant_message, *, on_metadata=None)：执行一次工具，按system/user/完整assistant/tool顺序构造请求，再请求一次并返回已校验五字段答案。细则见LEARNING_PLAN.md。
+2026-11-04：学员恢复入口退出码传递，续答源码4bbeca8a通过test/check_s4_06b.py **13/13、退出码0**。包含原续答覆盖与真实CLI有效0／空白1；此前12/13保留在记录中。没有新增真实模型请求。
+
+## 当前 S4-06C：接通首轮工具请求与续答
+
+在stage4_tool_flow.py只实现新占位ask_with_tool(client, question, *, on_metadata=None)。导师提供首轮请求构造和完整SDK消息提取；首轮得到tool_calls后复用ask_after_tool，由它执行工具并续答。正常路径共两次SDK方法调用、一次本地查询，不重复执行工具或实现循环。
 
 ```bash
 cd /Users/leon/workspace/PythonProject/history-ai-agent
-.venv/bin/python -B test/check_s4_06b.py
-# 完成后查看请求中的四条消息、假续答和模拟用量
-.venv/bin/python -B test/check_s4_06b.py --demo
-# 仅基础参数预览，尚未追加调用与工具结果，不读Key、不发请求
-.venv/bin/python -B stage4_tool_flow.py "请介绍教学目录中的青岚。"
+.venv/bin/python -B test/check_s4_06c.py
+# 完成后看required → 查询 → none续答及两份模拟统计
+.venv/bin/python -B test/check_s4_06c.py --demo
 ```
 
-占位实际基线 **2/12、退出码1**，安全预览和S4-06A及此前回归通过，目标12/12及--demo退出码0。假client和SDK DTO离线验收，真实模型请求0次；演示mode=model与usage都是协议假值。本课从已有调用消息开始；首轮让模型生成tool_calls的完整接线留到S4-06C，不在本课预实现。
+实际占位基线 **3/13、退出码1**，两个提供的辅助及S4-06B全链回归通过，目标13/13和--demo退出码0。检查包含真实SDK＋内存HTTP，未读Key或连接模型；演示mode／token数是假值。原CLI仍仅基础预览，完整新流程由检查演示驱动。规则见LEARNING_PLAN.md，不新增依赖或改旧函数。
 
 ## 每课验收后的 GitHub 同步
 

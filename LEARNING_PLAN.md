@@ -61,8 +61,8 @@ S1-01、S1-02 已通过；S2-01～S2-03 程序验收及当前提示词人工审�
 | S4-04 | 实现一个确定性工具（离线已验收） | 本地地名条目查询可独立运行，练习资料明确标注来源或模拟状态。 |
 | S4-05 | 读取模型提出的工具请求（离线程序已验收） | 识别工具名称与参数，理解它尚未被程序执行。 |
 | S4-06A | 执行工具并构造回传消息（离线已验收） | 单次受控执行，role=tool关联调用ID，完整序列化结果。 |
-| S4-06B | 回填工具结果并让模型续答（当前） | 从已有调用消息出发，保留完整assistant并追加tool，只请求一次续答。 |
-| S4-06C | 接通首轮调用请求与续答 | 加入模型首轮生成tool_calls，形成有限两次请求的固定流程。 |
+| S4-06B | 回填工具结果并让模型续答（离线13/13已验收） | 从已有调用消息出发，保留完整assistant并追加tool，只请求一次续答。 |
+| S4-06C | 接通首轮调用请求与续答（当前） | 加入模型首轮生成tool_calls，形成有限两次请求的固定流程。 |
 | S4-07 | 处理工具参数与执行失败 | 未知工具、无效参数、无结果或异常得到明确处理。 |
 | S4-08 | 固定流程与阶段评估 | 对比直接回答与工具辅助流程，记录正确性、调用次数和用量。 |
 
@@ -778,7 +778,9 @@ message = {
 
 学员指出第38行：该行确实是工具内部的目录匹配条件；导师补充第138行lookup_place(...)是从execute_tool_request发起工具执行的调用点。区分内部查找逻辑与调用入口，不据行号回答或测试通过标全面掌握；下一课检验完整消息关联。
 
-## 当前 S4-06B：一次工具结果续答（待实现）
+## S4-06B：一次工具结果续答（离线已验收，保留修正过程）
+
+2026-11-04最终13/13、退出码0；下文保留原布置与首次12/13的定位记录，最终复验见后记。
 
 一个30～60分钟目标：收到已有的assistant工具调用消息后，执行本地工具，把完整协议回填给模型请求一次续答，复用五字段答案校验。新增当前所需编排模块stage4_tool_flow.py，不修改纯工具模块、旧核心、真实入口或阶段3代码。S4-06C再接首轮生成调用消息，本课不提前实现完整两次请求或Agent循环。
 
@@ -812,3 +814,54 @@ message = {
 完成后交检查与--demo输出，回答“为什么不能只把tool结果发给模型，而省略前面的assistant调用消息？”验收后同轮布置S4-06C检查、更新记录并上传。真实模型请求计划0次，E14/E15正文和具体理由仍待补，已有输出即可，不为补记录重复调用。
 
 2026-11-03查询[Kimi工具调用消息顺序](https://platform.kimi.com/docs/guide/use-kimi-api-to-complete-tool-calls)、[tool_choice约束](https://platform.kimi.com/docs/guide/use-tool-choice)及[Kimi K3完整assistant要求](https://platform.kimi.com/docs/guide/kimi-k3-quickstart)；本地SDK 3.37.0的ChatCompletionToolChoiceOptionParam确认支持none，ChatCompletion/ChatCompletionMessage DTO在离线检查使用。保留现有模型和预算，不升级依赖；本课不声称验证Kimi真实生成、传输或计费。
+
+### 2026-11-04：S4-06B首次提交与入口定位（后续已修复）
+
+2026-11-04：学员提交ask_after_tool，续答源码7969b3ad实际通过原test/check_s4_06b.py **12/12、退出码0**，--demo退出码0。完整assistant/tool顺序、工具单次执行、请求预算、收到响应后校验前通知元数据、失败传播、隔离及旧回归通过；这是原检查覆盖内的续答核心通过，尚未整体验收。
+
+额外实际子进程复现：空白问题打印“问题必须是非空字符串”，但进程退出0，main约定返回1。文件末尾从raise SystemExit(main())改为只调用main()，丢失函数返回码。原检查仅调用main函数，遗漏真实入口；导师补入第13项“真实CLI进程：有效0／空白1”，保留原12项。当前补强检查 **12/13、退出码1**，只差入口码；未修改业务文件。临时副本仅恢复原入口后13/13，是定位控制，不计学员完成。
+
+学员解释省略assistant会丢prompt，方向接近；导师补充这里丢的是模型工具调用记录及其与tool_call_id的关联，原system/user即使仍在也不够。此处为单次表述待巩固，不标全面掌握或反复出错。
+
+当前只做一个5～10分钟修正：在stage4_tool_flow.py的__main__保护内将main()返回值传递给解释器退出状态。Python函数return 1不会自动结束整个进程；原被注释入口已提供方向。无需重写ask_after_tool，不改旧工具或SDK调用逻辑。
+
+test/check_s4_06b.py已保留原12项并新增进程边界检查，目标改为13/13、退出码0；布置时2/12及旧参考实现12/12作为历史保留。修正后提交新检查结果，并解释“为什么main返回1，进程仍可能退出0？”本课整体通过后同轮再布置S4-06C、更新记录和上传，不提前代写下一课。
+
+2026-11-04核对[Python官方sys.exit／SystemExit及退出状态](https://docs.python.org/3.11/library/sys.html#sys.exit)。本轮全程离线，新增真实模型请求0次；原12项与--demo的假统计不计真实用量。未完成整体验收，当前不执行课程提交／上传，也不改既往日报。
+
+### 2026-11-04：S4-06B最终复验
+
+2026-11-04最终复验：学员恢复raise SystemExit(main())，续答源码4bbeca8a实际通过test/check_s4_06b.py **13/13、退出码0**，包含真实离线CLI有效输入0／空白输入1及原12项。S4-06B离线程序整体验收完成。此前7969b3ad的12/13保留为入口回归及检查补强过程，临时13/13控制不计学员成果；最终成绩来自当前实际工程。
+
+本轮文字包含“调用SystemExit，进程退出0”，可能有省略，不能据此标概念已掌握。导师给出精确对照：main()的返回值被丢弃时，脚本正常结束通常退出0；raise SystemExit(main())在main返回1时退出1。代码修复通过与概念复述分别记录，仍待后续迁移，不据含糊表述增加反复出错次数。导师本轮真实模型请求0次。
+
+## 当前 S4-06C：首轮工具请求与一次续答（待实现）
+
+一个30～60分钟目标：在已有续答能力前增加首轮模型调用，让模型提供工具调用请求，再复用B完成执行与续答，组成固定两步流程。继续同阶段stage4_tool_flow.py，不改已验收函数；只实现新占位ask_with_tool(client, question: str, *, on_metadata=None) -> dict。
+
+最多三个概念：①tools声明能力，模型返回tool_calls描述本次意图；首轮required表示至少一个调用，本项目单调用上限仍由程序校验；②组合已验收函数：类似Kotlin UseCase复用另一段业务流程，B已负责工具执行，不在C再执行一次；③固定流程有清楚终点：首轮要求调用，续答none要求答案，正常两次create、一次工具，异常停止，无自主循环。
+
+导师提供build_initial_tool_request(question)：复用当前预算和工具schema，首轮仅system/user，tool_choice=required；首轮不输出最终五字段答案，所以不携带response_format。首轮七字段为model/messages/stream/max_completion_tokens/reasoning_effort/tools/tool_choice，模型kimi-k3、非流式、4096／low保持。最终续答仍由B带JSON Mode输出五字段，不修改B请求构造。
+
+导师提供read_tool_call_response(response)：检查单项choices及finish_reason=tool_calls，将SDK message.to_dict()转为完整独立消息，保留tool_calls和reasoning_content等字段；必须assistant及非空调用列表。不在这里执行工具或重写参数校验；未知工具、坏JSON、多调用由原执行器拒绝。
+
+学员只实现以下编排：
+
+1. 用build_initial_tool_request(question)先校验并构造首轮请求；on_metadata非None时须callable，否则TypeError，校验完成前零SDK调用。
+2. 使用传入client.chat.completions.create(**request)请求首轮一次。SDK异常原样传播，没有响应就不通知元数据，不自行重试或创建／关闭client。
+3. 收到响应后，有回调就先调用on_metadata(extract_response_metadata(response))，再交read_tool_call_response提取完整assistant。None时跳过提取；首轮失败仍保留已收到的统计；回调异常原样停止。
+4. 把同一client、原question、完整assistant消息和同一个on_metadata交给ask_after_tool，恰好复用一次，直接返回其已校验五字段dict。不要在C再调用lookup_place或execute_tool_request，也不要重写B的消息回填、JSON解析或资源管理。
+
+最小类型流（示意而非完整实现）：`SDK响应对象 → read_tool_call_response(response) → 完整assistant dict → ask_after_tool(...) → 五字段答案dict`。第一份模型回复提出调用，第二份才是答案，不能把首轮content直接送最终答案JSON解析器。
+
+本课为明确的工具查询路径：若首轮直接stop、length、包络错误或无调用则ValueError并停止，不回退成直接回答；合法调用中的坏参数／未知工具／多调用由B拒绝，不发第二次请求。工具失败不续答；续答失败不再执行或发第三次请求。首轮required只要求至少一次，模型可能输出多调用，因此程序的单次限制仍有作用。
+
+正常路径两次create、一次lookup_place，元数据回调按tool_calls／stop顺序各一次，保留两份None／0及原值，不覆盖、推算或自动合并。此处限制应用层方法调用；传入client的SDK自动重试需由调用方配置为0，已有真实入口及本检查的SDK内存客户端均采用零重试。本课不增加真实客户端入口或付费调用。
+
+运行`.venv/bin/python -B test/check_s4_06c.py`，实际占位 **3/13、退出码1**：两个已提供的辅助与S4-06B的13项及此前回归通过；目标13/13、实现后--demo退出码0。默认CLI继续保留B的基础预览，本课完整流程由--demo驱动；不读取.env／真实Key、请求头或会话，不连接模型。
+
+检查包含假client＋真实SDK DTO，以及真实SDK的两次内存HTTP序列化；实际临时正向13/13、演示成功，重复执行工具5/13、晚记录首轮统计11/13、遗漏回调透传8/13，均检出。参考实现不写入学员业务文件，不计完成。演示mode=model和13/4/17、9/4/13都是假响应字段，不能填入真实评估。
+
+完成后提交检查和--demo输出，并解释“为什么ask_with_tool中不应该再直接执行lookup_place？”验收后同轮布置S4-07及检查、更新记录并上传。本课真实请求计划0次；E14/E15的已有正文和理由仍可补录，不为补证据重跑。
+
+2026-11-04查询[Kimi K3工具调用与完整assistant要求](https://platform.kimi.com/docs/guide/kimi-k3-quickstart)，确认required要求至少一个调用、工具结果按tool_call_id关联并保留完整消息；本地SDK 3.37.0的ToolChoice类型与DTO核对，内存传输验证两轮字段。保留现有模型和依赖，不因文档出现其他模型而升级；没有Kimi真实生成或收费验证结论。

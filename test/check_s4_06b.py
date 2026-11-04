@@ -145,6 +145,21 @@ def main():
         require(code == 0 and '未发送请求' in output.getvalue(), '默认入口只预览，无Key和模型调用')
         require('"tool_choice": "none"' in output.getvalue(), '提供的续答请求禁止新工具调用')
 
+    def cli_process():
+        module()  # 先检查允许的导入；子进程只运行已提供的离线预览入口。
+        for question, expected_code in ((QUESTION, 0), ('   ', 1)):
+            result = subprocess.run([sys.executable, '-B', str(SOURCE), question], cwd=PROJECT,
+                env={'PYTHONDONTWRITEBYTECODE': '1', 'PYTHONIOENCODING': 'utf-8'},
+                capture_output=True, text=True, timeout=15)
+            require(result.returncode == expected_code,
+                    f'CLI输入{question!r}应退出{expected_code}，实际{result.returncode}；'
+                    'main返回值需要传给SystemExit，不能在__main__里被丢弃')
+            require(not result.stderr and result.stdout.strip(), '离线CLI有清楚输出，无异常堆栈')
+            if expected_code == 0:
+                require('未发送请求' in result.stdout, '默认入口只做基础预览')
+            else:
+                require('问题必须是非空字符串' in result.stdout, '空白问题提示并以非零状态结束')
+
     def normal():
         client = FakeClient()
         records = []
@@ -336,7 +351,8 @@ def main():
                 print(f'演示未通过：{type(error).__name__}: {error}')
                 return 1
         else:
-            for title, action in [('安全导入与默认基础预览', preview), ('一次续答返回已校验五字段答案', normal),
+            for title, action in [('安全导入与默认基础预览', preview), ('真实CLI进程：有效0／空白1', cli_process),
+                    ('一次续答返回已校验五字段答案', normal),
                     ('完整assistant在tool之前，保留推理字段与调用ID', context),
                     ('原请求预算、工具schema、JSON Mode及tool_choice none', budget),
                     ('未命中照常回传fixture结果', not_found), ('问题／回调错误先于工具与请求', invalid_input),

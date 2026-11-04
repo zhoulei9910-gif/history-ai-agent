@@ -5,7 +5,7 @@ from copy import deepcopy
 import json
 
 from stage4_structured import build_structured_request, extract_response_metadata, parse_answer_json
-from stage4_tools import execute_tool_request
+from stage4_tools import execute_tool_request, lookup_place
 
 # 导师提供的工具描述；它向API描述能力，不会执行Python函数。
 LOOKUP_TOOL = {
@@ -33,6 +33,7 @@ def build_followup_request(question: str) -> dict:
     )
     request["tools"] = [deepcopy(LOOKUP_TOOL)]
     request["tool_choice"] = "none"
+    # print("return request = %s" % json.dumps(request, ensure_ascii=False, indent=2) )
     return request
 
 
@@ -57,14 +58,84 @@ def parse_final_response(response) -> dict:
 
 
 def ask_after_tool(client, question: str, assistant_message: dict, *, on_metadata=None) -> dict:
-    """S4-06B由学员实现：执行工具，追加完整协议，再请求一次续答。
+    """S4-06B：执行工具，追加完整协议，再请求一次续答。
 
-    输入assistant_message是上一响应的完整dict；本课由假SDK消息提供。
-    复用build_followup_request／execute_tool_request／parse_final_response。
-    保留元数据回调的失败统计；不创建或关闭外部client、不重试、不循环。
-    消息顺序、无调用与异常边界见学习计划。
+    先校验 question 和 on_metadata；执行一次工具并把完整 assistant
+    （深拷贝）与 tool 结果追加到请求后，请求一次续答并返回已校验答案。
+    不创建/关闭外部 client、不重试、不循环；异常原样传播。
     """
-    raise NotImplementedError("请完成S4-06B的ask_after_tool")
+    # 1) 构造续答基础请求（内部完成 question 的类型/空白校验）
+    request = build_followup_request(question)
+
+    # 2) on_metadata 非 None 时必须是可调用对象（在工具执行和 SDK 请求之前）
+    if on_metadata is not None and not callable(on_metadata):
+        raise TypeError("on_metadata 必须是可调用对象或 None")
+
+    # 3) 执行一次工具；无有效调用抛 ValueError，零 SDK 请求
+    tool_message = execute_tool_request(assistant_message)
+    if tool_message is None:
+        raise ValueError("本续答函数需要已有工具调用")
+
+    # 4) 追加完整 assistant（深拷贝）和 tool 结果，顺序 system → user → assistant → tool
+    request["messages"].append(deepcopy(assistant_message))
+    request["messages"].append(tool_message)
+
+    # print(f"request: {request} ")
+
+    # 5) 请求一次续答；SDK 异常原样传播，无响应不通知元数据
+    response = client.chat.completions.create(**request)
+
+    # 6) 收到响应后，先通知元数据，再校验回答
+    if on_metadata is not None:
+        on_metadata(extract_response_metadata(response))
+
+    # 7) 返回已校验的五字段续答
+    return parse_final_response(response)
+
+
+def build_initial_tool_request(question: str) -> dict:
+    """导师提供：首轮只提出工具请求，不要求输出最终答案JSON。"""
+    request = build_followup_request(question)
+    request.pop("response_format")
+    request["tool_choice"] = "required"
+    request["messages"][0]["content"] = (
+        "你是中文地理历史助手。本流程查询虚构教学目录，不提供真实史料。"
+        "本轮先根据用户问题提取要查询的地名，提出一次lookup_place调用。"
+        "只允许一个调用；不要补造目录结果或把虚构条目当史实。"
+        "后续步骤会执行工具并生成最终回答。"
+    )
+    return request
+
+
+def read_tool_call_response(response) -> dict:
+    """导师提供：校验首轮包络，保留完整SDK消息；参数由旧执行器校验。"""
+    choices = getattr(response, "choices", None)
+    if not isinstance(choices, list) or len(choices) != 1:
+        raise ValueError("首轮响应必须恰好一个choice")
+    choice = choices[0]
+    if getattr(choice, "finish_reason", None) != "tool_calls":
+        raise ValueError("本固定流程首轮需要tool_calls，不接受直接答案")
+    message = getattr(choice, "message", None)
+    convert = getattr(message, "to_dict", None)
+    if not callable(convert):
+        raise ValueError("首轮message必须是可转dict的SDK消息")
+    data = convert()
+    if not isinstance(data, dict) or data.get("role") != "assistant":
+        raise ValueError("首轮必须是assistant消息")
+    calls = data.get("tool_calls")
+    if not isinstance(calls, list) or not calls:
+        raise ValueError("首轮需要非空tool_calls列表")
+    return deepcopy(data)
+
+
+def ask_with_tool(client, question: str, *, on_metadata=None) -> dict:
+    """S4-06C由学员实现：首轮获取调用请求，再复用ask_after_tool续答。
+
+    首轮收到响应先通知元数据，再交read_tool_call_response转完整消息。
+    ask_after_tool已经负责执行与续答，不在此重复执行工具或实现循环。
+    输入、异常与最多两次SDK调用的规则见学习计划；外部client不在此关闭。
+    """
+    raise NotImplementedError("请完成S4-06C的ask_with_tool")
 
 
 def main(argv=None) -> int:
@@ -83,4 +154,5 @@ def main(argv=None) -> int:
 
 
 if __name__ == "__main__":
+    # main()
     raise SystemExit(main())
