@@ -22,7 +22,7 @@ cd /Users/leon/workspace/PythonProject/history-ai-agent
 .venv/bin/python test/check_s3_06.py
 ```
 
-geo_history_cli.py 是离线模拟入口；model_demo.py 保留早期实现，当前真实问答入口为 model_demo_ask_turn.py（原 model_demo_pro.py 已改名），使用 Kimi / kimi-k3。后续课程使用 ask_turn 入口；早期文件名只作为历史记录保留。可复用单次问答与 CLI 展示已通过离线验收。
+geo_history_cli.py 是离线模拟入口；model_demo.py 保留早期实现，当前真实问答入口为 model_demo_ask_turn.py（原 model_demo_pro.py 已改名），使用 Kimi / kimi-k3。ask_turn保留为阶段3入口；阶段4使用stage4_*模块，阶段5使用独立入口stage5_retrieval.py。早期文件名只作为历史记录保留。可复用单次问答与 CLI 展示已通过离线验收。
 config.py 维护供应商配置，并在导入时使用 dotenv 加载 .env；默认供应商仍为 DeepSeek，但模型示例显式选择 kimi。
 Kimi 的本项目变量名为 KIMI_API_KEY。只在本地配置，不打印或提交；已验证 .env 被忽略且未被 Git 跟踪。
 
@@ -135,18 +135,21 @@ STAGE3_REVIEW.md保留四场景、真实验证状态和导师示范说明；阶�
 
 2026-11-04：边界源码bd40e79d实际通过test/check_s4_07.py **12/12、退出码0**及--demo。已知失败返回固定错误码并保留已有响应统计；未知异常继续传播，旧回归通过。没有新增真实模型调用或质量结论。
 
-## 当前 S4-08：第四阶段离线评估报告
+## S4-08：第四阶段离线评估报告已验收
 
-本课只填写STAGE4_REVIEW.md，不新增业务功能。导师提供test/check_stage_4.py汇总检查和四个受控对比：直接问答、工具问答、未收录、续答JSON失败。运行--demo获取程序测量、指纹，再填写表格和三段自己的结论。
+2026-11-04：学员提交STAGE4_REVIEW.md，导师实际运行test/check_stage_4.py **4/4、退出码0**，指纹b3dcb883；三段结论人工审阅通过。四行测量与受控场景相符，能区分预期业务失败、统计不完整及真实质量待验证。此处只验收离线评估报告及已测程序行为，不标全面掌握、模型准确率或Agent能力已验证；本轮真实模型请求0次。
+
+## 当前 S5-01：可追溯资料加载
+
+stage5_retrieval.py为独立新入口。学员只实现load_documents，并在knowledge_sources.json的大运河示例旁增加一条真实来源的中文概述。四字段为id/title/text/source_url，完整契约与分步提示见LEARNING_PLAN.md当前课。
 
 ```bash
 cd /Users/leon/workspace/PythonProject/history-ai-agent
-.venv/bin/python -B test/check_stage_4.py --demo
-# 填写报告后运行完整汇总
-.venv/bin/python -B test/check_stage_4.py
+.venv/bin/python -B stage5_retrieval.py
+.venv/bin/python -B test/check_s5_01.py
 ```
 
-实际模板基线 **2/4、退出码1**：S4-07全链和四个离线场景通过，报告表／结论待填；目标4/4及导师人工审阅结论。指纹b3dcb883来自五个声明文件，不是Git提交号。假SDK回答与token数不证明真实质量、延迟或实际费用；T3业务失败符合预期，统计不完整时合计未知。真实验证继续另列E14/E15，不要求重复调用。
+已实际运行占位基线 **2/10、退出码1**；目标10/10、CLI退出0并输出至少两条资料，另由导师核对文字与来源。参考[UNESCO长城简介](https://whc.unesco.org/en/list/438/)整理第二条；URL格式通过不等于内容已核实。本课不联网抓取、不请求模型；关键词检索留给S5-02。
 
 ## 每课验收后的 GitHub 同步
 
