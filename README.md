@@ -127,18 +127,22 @@ STAGE3_REVIEW.md保留四场景、真实验证状态和导师示范说明；阶�
 
 2026-11-04：学员恢复入口退出码传递，续答源码4bbeca8a通过test/check_s4_06b.py **13/13、退出码0**。包含原续答覆盖与真实CLI有效0／空白1；此前12/13保留在记录中。没有新增真实模型请求。
 
-## 当前 S4-06C：接通首轮工具请求与续答
+## S4-06C：首轮调用与续答已离线验收
 
-在stage4_tool_flow.py只实现新占位ask_with_tool(client, question, *, on_metadata=None)。导师提供首轮请求构造和完整SDK消息提取；首轮得到tool_calls后复用ask_after_tool，由它执行工具并续答。正常路径共两次SDK方法调用、一次本地查询，不重复执行工具或实现循环。
+2026-11-04：学员实现ask_with_tool，当前编排源码849978d5通过test/check_s4_06c.py **13/13、退出码0**；此前f64c1e3f的演示成功。正常两次SDK方法调用、一次本地虚构目录查询；真实SDK配内存HTTP，无真实模型调用。已有流程保留抛异常契约。
+
+## 当前 S4-07：把已知失败转换为安全结果
+
+新增同阶段stage4_tool_app.py作为调用方边界；不改已验收流程。只实现run_tool_question(client, question)：调用ask_with_tool一次，用内部列表收集统计，成功／已知失败统一返回ok/answer/error/responses四字段。格式构造与离线示例由导师提供，异常映射见LEARNING_PLAN.md。
 
 ```bash
 cd /Users/leon/workspace/PythonProject/history-ai-agent
-.venv/bin/python -B test/check_s4_06c.py
-# 完成后看required → 查询 → none续答及两份模拟统计
-.venv/bin/python -B test/check_s4_06c.py --demo
+.venv/bin/python -B test/check_s4_07.py
+# 实现后看成功、首轮失败和续答失败的结果及统计
+.venv/bin/python -B test/check_s4_07.py --demo
 ```
 
-实际占位基线 **3/13、退出码1**，两个提供的辅助及S4-06B全链回归通过，目标13/13和--demo退出码0。检查包含真实SDK＋内存HTTP，未读Key或连接模型；演示mode／token数是假值。原CLI仍仅基础预览，完整新流程由检查演示驱动。规则见LEARNING_PLAN.md，不新增依赖或改旧函数。
+实际占位基线 **2/12、退出码1**，已提供格式与C全链回归通过，目标12/12和--demo退出码0。不创建客户端、不读Key、不重试、不连接模型；APIError／ValueError／RuntimeError按约定映射，其余异常传播。运行新模块本身只展示格式示例，不代表问答实现完成。
 
 ## 每课验收后的 GitHub 同步
 

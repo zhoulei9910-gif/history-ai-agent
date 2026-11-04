@@ -62,8 +62,8 @@ S1-01、S1-02 已通过；S2-01～S2-03 程序验收及当前提示词人工审�
 | S4-05 | 读取模型提出的工具请求（离线程序已验收） | 识别工具名称与参数，理解它尚未被程序执行。 |
 | S4-06A | 执行工具并构造回传消息（离线已验收） | 单次受控执行，role=tool关联调用ID，完整序列化结果。 |
 | S4-06B | 回填工具结果并让模型续答（离线13/13已验收） | 从已有调用消息出发，保留完整assistant并追加tool，只请求一次续答。 |
-| S4-06C | 接通首轮调用请求与续答（当前） | 加入模型首轮生成tool_calls，形成有限两次请求的固定流程。 |
-| S4-07 | 处理工具参数与执行失败 | 未知工具、无效参数、无结果或异常得到明确处理。 |
+| S4-06C | 接通首轮调用请求与续答（离线13/13已验收） | 加入模型首轮生成tool_calls，形成有限两次请求的固定流程。 |
+| S4-07 | 处理工具参数与执行失败（当前） | 未知工具、无效参数、无结果或异常得到明确处理。 |
 | S4-08 | 固定流程与阶段评估 | 对比直接回答与工具辅助流程，记录正确性、调用次数和用量。 |
 
 ### 阶段 5：基于资料的问答与 RAG
@@ -835,7 +835,7 @@ test/check_s4_06b.py已保留原12项并新增进程边界检查，目标改为1
 
 本轮文字包含“调用SystemExit，进程退出0”，可能有省略，不能据此标概念已掌握。导师给出精确对照：main()的返回值被丢弃时，脚本正常结束通常退出0；raise SystemExit(main())在main返回1时退出1。代码修复通过与概念复述分别记录，仍待后续迁移，不据含糊表述增加反复出错次数。导师本轮真实模型请求0次。
 
-## 当前 S4-06C：首轮工具请求与一次续答（待实现）
+## S4-06C：首轮工具请求与一次续答（离线已验收）
 
 一个30～60分钟目标：在已有续答能力前增加首轮模型调用，让模型提供工具调用请求，再复用B完成执行与续答，组成固定两步流程。继续同阶段stage4_tool_flow.py，不改已验收函数；只实现新占位ask_with_tool(client, question: str, *, on_metadata=None) -> dict。
 
@@ -865,3 +865,49 @@ test/check_s4_06b.py已保留原12项并新增进程边界检查，目标改为1
 完成后提交检查和--demo输出，并解释“为什么ask_with_tool中不应该再直接执行lookup_place？”验收后同轮布置S4-07及检查、更新记录并上传。本课真实请求计划0次；E14/E15的已有正文和理由仍可补录，不为补证据重跑。
 
 2026-11-04查询[Kimi K3工具调用与完整assistant要求](https://platform.kimi.com/docs/guide/kimi-k3-quickstart)，确认required要求至少一个调用、工具结果按tool_call_id关联并保留完整消息；本地SDK 3.37.0的ToolChoice类型与DTO核对，内存传输验证两轮字段。保留现有模型和依赖，不因文档出现其他模型而升级；没有Kimi真实生成或收费验证结论。
+
+2026-11-04：学员提交ask_with_tool，初验编排源码f64c1e3f实际通过test/check_s4_06c.py **13/13、退出码0**及--demo。随后学员整理实现、移除不可达尾部代码，当前849978d5再次实际13/13、退出码0，作为本轮验收版本。两次SDK方法调用、复用B、单次工具、完整消息、双响应元数据、异常停止、真实SDK内存HTTP与旧回归通过；S4-06C离线程序验收完成，未连接模型。
+
+学员对C职责划分方向正确；导师补充不重复lookup_place的关键是B已校验并执行。直接调用工具本身不必然参数错误，即使参数正确也可能造成重复执行。此处是单次澄清，理解迁移待后续观察，不据测试通过标全面掌握。
+
+## 当前 S4-07：已知失败的应用结果（待实现）
+
+一个30～60分钟目标：在已验收的抛异常流程外，增加调用方可展示的成功／失败结果，保留已经发生的响应统计。新建同阶段stage4_tool_app.py，仅负责这一边界；原流程模块继续抛异常，便于组合与调试，不改S4-06C或工具模块。
+
+最多三个概念：①Python用try/except按异常类捕获，类似Kotlin try/catch；这里只转换约定类型，未知错误继续传播；②成功／失败结果类似Kotlin Result或sealed class，但Python dict不强制字段，使用提供的构造函数固定结构；③失败不撤销已有响应，responses在调用前创建，异常时保留已有记录，不清空或补造0。
+
+导师提供ERROR_MESSAGES、success_result(answer, responses)、failure_result(code, responses)及只展示格式的main。只由学员实现run_tool_question(client, question: str) -> dict；这层使用已有官方SDK的APIError类，但不创建客户端或读取配置，不增加新依赖。
+
+结果恰好四字段：
+
+| 字段 | 成功 | 已知失败 |
+| --- | --- | --- |
+| ok | True（bool） | False（bool） |
+| answer | C返回的已校验五字段答案 | None，不回退mock或旧答案 |
+| error | None | 恰好code/message，使用提供的固定文案 |
+| responses | 按发生顺序保留每次响应的四字段统计 | 同样保留失败前已经收到的统计，可能0／1／2份 |
+
+实现顺序：先创建本次独立responses列表；question非str或strip后为空时直接failure_result("invalid_input", responses)，零流程／零SDK调用。合法问题进入try，调用ask_with_tool(client, question, on_metadata=responses.append)恰好一次；成功交给success_result。
+
+| 来源 | error.code | 固定message |
+| --- | --- | --- |
+| 非str／空白问题 | invalid_input | 问题必须是非空字符串。 |
+| APIError及其子类 | api_error | 模型请求失败。 |
+| ValueError（含JSONDecodeError） | invalid_output | 模型返回的工具请求或回答不符合约定。 |
+| RuntimeError | execution_error | 工具流程执行失败。 |
+
+各except分支把同一responses交给failure_result，不打印／回传str(error)、SDK响应、异常对象或请求详情。execution_error只表示流程执行失败，不声称一定定位到工具本身。合法未命中的False/None是正常业务结果，仍沿用C续答成功，不转换成异常。
+
+本函数不接外部on_metadata，而是拥有内部收集器，因此不把调用方观察器异常误当模型输出错误。TypeError、AttributeError、OSError等未约定异常，以及KeyboardInterrupt、SystemExit继续原样传播；不要加except Exception或except BaseException统吞。已知类型通过结果给调用方，其余由上层进一步处理，后续服务化再补日志与HTTP映射。
+
+Python最小语法示例：`except ValueError:`可以处理该类型及子类；JSONDecodeError也属于ValueError。本课不用读取错误文本判断类别。SDK连接、超时及HTTP状态类请求异常可由APIError捕获，并不是所有Python异常都属于APIError。
+
+成功通常保留两份统计；首轮包络／参数无效常已收到一份；第二轮JSON失败已有两份；SDK无响应时不添加该次统计。None仍是未知、0仍是响应明确值，不从失败或空列表推断免费。两种构造函数已经deepcopy答案与统计，保证外部修改及后续回调不污染已返回结果；不要复用全局列表。
+
+运行`.venv/bin/python -B test/check_s4_07.py`，实际占位 **2/12、退出码1**，提供的格式与C的13项及此前回归通过；目标12/12，实现后--demo退出码0。检查覆盖正常／未收录、输入、两阶段输出失败、真实SDK异常类、RuntimeError、未知异常传播、统计None/0和快照，不运行真实请求。
+
+检查器临时控制实测：正向12/12、演示成功；失败清空统计9/12、统吞Exception11/12、回显SDK错误11/12，均检出。参考实现只在临时目录，不写入学员函数，不计完成。演示mode及token数仍是假值，真实请求计划0次。
+
+完成后交检查与演示输出，并说明“为什么续答JSON失败时，返回的responses仍可能有两条？”通过后同轮布置S4-08阶段评估及检查、更新记录并上传。E14/E15既有回答正文与判定理由仍待补，不重复调用；本课不将临时JSON实验文件或会话缓存纳入上传。
+
+2026-11-04核对[官方SDK错误处理](https://developers.openai.com/api/reference/python#handling-errors)及本地SDK 3.37.0的_exceptions.py，确认APIError、APIConnectionError、APITimeoutError、APIStatusError层次和本课模拟构造；保持现有版本。请求结果和模型真实质量分别记录，当前无新增收费或史实核实结论。
