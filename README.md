@@ -139,17 +139,24 @@ STAGE3_REVIEW.md保留四场景、真实验证状态和导师示范说明；阶�
 
 2026-11-04：学员提交STAGE4_REVIEW.md，导师实际运行test/check_stage_4.py **4/4、退出码0**，指纹b3dcb883；三段结论人工审阅通过。四行测量与受控场景相符，能区分预期业务失败、统计不完整及真实质量待验证。此处只验收离线评估报告及已测程序行为，不标全面掌握、模型准确率或Agent能力已验证；本轮真实模型请求0次。
 
-## 当前 S5-01：可追溯资料加载
+## S5-01：资料加载及来源支持核对已验收
 
-stage5_retrieval.py为独立新入口。学员只实现load_documents，并在knowledge_sources.json的大运河示例旁增加一条真实来源的中文概述。四字段为id/title/text/source_url，完整契约与分步提示见LEARNING_PLAN.md当前课。
+2026-11-05：学员实现load_documents，入口eb7044e9由导师实际运行test/check_s5_01.py **10/10、退出码0**。json.load配合with path.open合法，四字段类型／清理、清理后id去重、空列表、URL辅助及文件错误边界通过；实际CLI退出0、输出42条资料，stderr为空。导师增加下一课占位与CLI后入口24246ac0，加载函数逐字保留，S5-01及此前整链仍10/10通过；不计新检索已完成。
+
+学员提交42条中文概述，资料SHA256为8978e73c1bca35511c95fb2342f97a96901e3e08491832b32494f2d471904a6d。2026-11-05导师逐条读取所列42个UNESCO页面的开头简介，对照主题、时代、数量和用途，未发现阻碍本课的来源支持问题；具体URL随knowledge_sources.json保存。这个结论只表示当前概述受所列页面支持，未做独立多来源史实核验，不声称作者身份或全面掌握。学员指出链接可能非法／不准确；导师补充即使URL格式正确且页面存在，也需核对页面是否支持文字。此处为单次解释待后续迁移，不标反复出错。
+
+## 当前 S5-02：关键词检索基线
+
+只实现stage5_retrieval.py的search_documents；加载器和42条资料保留。查询按空白分词、casefold并去重，只查title/text，每命中一个不同词得1分；按分数降序、同分保留原顺序，返回带来源的前top_k项，无命中[]。完整契约见LEARNING_PLAN.md及函数说明。
 
 ```bash
 cd /Users/leon/workspace/PythonProject/history-ai-agent
-.venv/bin/python -B stage5_retrieval.py
-.venv/bin/python -B test/check_s5_01.py
+.venv/bin/python -B stage5_retrieval.py --query "水利 交通" --top-k 3
+.venv/bin/python -B stage5_retrieval.py --query "青岚朝"
+.venv/bin/python -B test/check_s5_02.py
 ```
 
-已实际运行占位基线 **2/10、退出码1**；目标10/10、CLI退出0并输出至少两条资料，另由导师核对文字与来源。参考[UNESCO长城简介](https://whc.unesco.org/en/list/438/)整理第二条；URL格式通过不等于内容已核实。本课不联网抓取、不请求模型；关键词检索留给S5-02。
+实际占位 **2/12、退出码1**，旧S5-01整链通过，目标12/12及CLI正常0。不提供query时仍是原加载模式；本课不接模型，不产生模型费用。中文词需用空格分开，匹配得分不等于准确率；无命中不证明现实不存在。
 
 ## 每课验收后的 GitHub 同步
 
